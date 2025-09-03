@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/moment.svg" />
+    <link rel="mask-icon" href="/moment-mask.svg" color="#111827" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#161a1e" media="(prefers-color-scheme: dark)" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>moment</title>
+    <script>
+      (() => {
+        try {
+          const saved = localStorage.getItem('theme'); // 'editorial' | 'noir' | legacy
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          let theme = saved;
+          if (!theme) theme = prefersDark ? 'noir' : 'editorial';
+          if (theme === 'dark' || theme === 'darkroom') theme = 'noir';
+          if (theme === 'light' || theme === 'gallery') theme = 'editorial';
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.classList.toggle('dark', theme === 'noir');
+          window.__setTheme = (name) => {
+            const t = name === 'noir' ? 'noir' : 'editorial';
+            document.documentElement.dataset.theme = t;
+            document.documentElement.classList.toggle('dark', t === 'noir');
+            localStorage.setItem('theme', t);
+          };
+        } catch {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

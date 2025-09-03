@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+/* Design tokens and base styles */
+/* Default to Editorial (light) */
+:root {
+  /* Light mode defaults (pure white surfaces) */
+  --app-bg: #ffffff;
+  --card-bg: #ffffff;
+  --text: #1f2937;         /* slate-800 */
+  --muted: #6b7280;        /* slate-500 */
+  --border: #e7e5e4;       /* stone-200 */
+  --hover: #ffffff;        /* white surfaces */
+  --ring: #d6d3d1;         /* stone-300 */
+  --brand: #111827;        /* primary highlight (ink) */
+  --brand-700: #0f172a;    /* pressed */
+  --on-brand: #ffffff;     /* text on brand */
+  --danger: #e11d48;       /* semantic */
+}
+
+/* Theme: Editorial */
+:root[data-theme="editorial"] {
+  --app-bg: #ffffff;
+  --card-bg: #ffffff;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --border: #e7e5e4;
+  --hover: #ffffff;
+  --ring: #d6d3d1;
+  --brand: #111827;     /* primary highlight (ink) */
+  --brand-700: #0f172a; /* pressed */
+  --on-brand: #ffffff;  /* text on brand */
+  --danger: #e11d48;
+}
+
+/* Theme: Noir (dark) */
+:root[data-theme="noir"] {
+  /* Dark mode: uniform surfaces; white highlights for key actions */
+  --app-bg: #0e1113;      /* unified surface */
+  --card-bg: #0e1113;     /* same as app for seamless look */
+  --text: #e9eef2;        /* readable text */
+  --muted: #a8b0b7;       /* subdued secondary */
+  --border: #1c2226;      /* subtle outline */
+  --hover: #111519;       /* slight lift on hover */
+  --ring: #ffffff;        /* focus ring highlights */
+  --brand: #ffffff;       /* primary uses white */
+  --brand-700: #e5e7eb;   /* pressed */
+  --on-brand: #0e1113;    /* text on white */
+  --danger: #fb7185;
+}
+
+/* Apply defaults */
+html, body, #root { height: 100%; }
+body { background: var(--app-bg); color: var(--text); }
+
+/* Components using @apply must be inside a layer */
+@layer components {
+  .card {
+    @apply rounded-2xl border shadow-sm overflow-hidden;
+    background: var(--card-bg);
+    border-color: var(--border);
+  }
+  .btn-focus { @apply focus:outline-none focus-visible:ring-2; }
+}
+
+/* Tailwind ring color via CSS var */
+.btn-focus { --tw-ring-color: var(--ring); }
+
+/* Square card variant (no rounded corners) */
+.card--square { border-radius: 0; }
+
+/* Masonry helpers */
+.break-inside-avoid { break-inside: avoid; }
+
+/* Neutral text/border helpers */
+.muted { color: var(--muted); }
+.border-default { border-color: var(--border); }
+.hover-surface:hover { background: var(--hover); }
+
+/* Skeleton shimmer */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  /* Fallback for environments without color-mix */
+  background: #e5e7eb;
+  background: color-mix(in oklab, var(--card-bg) 70%, #9ca3af 30%);
+}
+.skeleton::after {
+  content: "";
+  position: absolute; inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg,
+    transparent,
+    /* Fallback stripe */ rgba(255,255,255,0.35),
+    color-mix(in oklab, var(--card-bg) 65%, #ffffff 35%),
+    transparent
+  );
+  animation: skeleton-shimmer 1.2s infinite;
+}
+@keyframes skeleton-shimmer { 100% { transform: translateX(100%); } }
+
