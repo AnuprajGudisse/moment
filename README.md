@@ -1,76 +1,49 @@
 # Moment
 
-A photo sharing app with React + Vite on the frontend, Supabase for auth/DB/storage, and a tiny FastAPI stub backend.
+Moment is a community photo app that treats photography as a craft and a conversation — not just content. It makes posting fast and thoughtful, and discovery clean and intentional.
 
-## Project layout
+## Problem Statement
 
-- `frontend/` — React app (Vite, Tailwind v4)
-- `backend/` — FastAPI stub + Supabase SQL schema
+- General social apps optimize for virality and speed, not careful viewing or context (EXIF, story, process). Photographers lose the why behind an image.
+- Portfolio sites are static and isolating; they don’t foster day‑to‑day feedback, discovery or collaboration.
+- Event sharing is fragmented, so gathering everyone’s photos from a photowalk or shoot is hard.
+- Opportunities (gigs, collabs) are scattered and rarely tailored to a photographer’s niche.
 
-## Prerequisites
+## Key Features
 
-- Node 18+ and npm
-- A Supabase project (URL + anon key)
-- Optional: Python 3.12+ for the FastAPI stub
+- Posting flow that respects craft
+  - Drag/drop or paste to upload; optional crop; auto EXIF extraction.
+  - Add caption, tags, people and location; store EXIF with the image for context.
+  - Edit Post dialog (no recrop): update caption, tags, people, location and EXIF later.
 
-## Quick start (frontend)
+- Feed designed for images
+  - Clean editorial card with author, place, and time‑ago.
+  - Likes and comments with lightweight preview inside the card; full drawer for threads.
+  - Accessible EXIF overlay toggle on the image (camera, lens, aperture, shutter, ISO, focal).
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+- Discover that adapts by device
+  - Masonry explore grid (all screens) for fast scanning.
+  - Mobile: tap a tile to open an infinite scroll overlay of feed cards (keep exploring).
+  - Desktop: tap a tile to open a single‑post modal with arrows and a comments panel.
+  - Search bar for captions, users and tags.
 
-Set these env vars in `frontend/.env.local`:
+- Profiles & ownership tools
+  - Lightweight profile (name, username, location, level, genres).
+  - Per‑post menu for owners: Edit post, Delete, Copy link, Download.
 
-```
-VITE_SUPABASE_URL=...your supabase URL...
-VITE_SUPABASE_ANON_KEY=...your anon key...
-```
+- Spaces for belonging and opportunity 
+  - Events: share photos from specific events (before/after, all in one place).
+  - Gags: a job/gig board for photographers.
+  - Communities: follow interests, join circles, share your niche.
+  - Trending: hot posts, tags, and events.
+  - Messages: direct and group conversations.
 
-## Backend (optional)
+## Tech Stack (at a glance)
 
-```bash
-cd backend
-uvicorn main:app --reload
-```
+- React 19 + Vite 7, Tailwind CSS v4, React Router, React Easy Crop
+- Supabase (Postgres, Auth, Storage) with RLS for photos, likes, comments, profiles
+- Minimal FastAPI stub for future extensions; most CRUD is direct to Supabase
 
-## Git & GitHub
-
-1) Initialize repo and first commit
-
-```bash
-git init
-git add .
-git commit -m "Initial commit: Moment app"
-```
-
-2) Create a new GitHub repo (via site or GitHub CLI). With GitHub CLI:
-
-```bash
-gh repo create your-username/moment --private --source=. --remote=origin --push
-```
-
-If creating on the website, then:
-
-```bash
-git branch -M main
-git remote add origin https://github.com/your-username/moment.git
-# or: git@github.com:your-username/moment.git
-git push -u origin main
-```
-
-> Note: `.gitignore` is configured to ignore `frontend/node_modules`, `frontend/dist`, Python `venv`, caches, and local env files.
-
----
-
-### Explore (current features)
-- Auth (email/password), profile edit
-- Photo upload with crop + EXIF, feed with likes/comments
-- Discover: masonry grid → viewer (mobile feed or desktop modal)
-- Edit post dialog (no crop changes) to update caption, tags, people, and EXIF
-- Placeholder sections: Events, Gags, Communities, Trending, Messages
-
-### License
-Internal/Private (add a LICENSE if needed)
-
+Project layout
+- `frontend/` — React app and UI components
+- `backend/` — FastAPI stub and Supabase SQL schema
