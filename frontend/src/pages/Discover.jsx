@@ -36,7 +36,7 @@ export default function Discover() {
   const [commentText, setCommentText] = useState("");
   const [commentErr, setCommentErr] = useState("");
   const [engagement, setEngagement] = useState({});
-  const [forceDetailViewer, setForceDetailViewer] = useState(false);
+  // Removed unused detail viewer state
 
   async function fetchPage({ initial = false } = {}) {
     if (initial) {
@@ -153,13 +153,13 @@ export default function Discover() {
     const p = list[index];
     setViewIndex(index);
     setViewer({ id: p.id, url: p.url });
-    setForceDetailViewer(false);
+    // detail viewer state removed
     setComments([]); setCommentText(""); setCommentErr(""); setCommentsLoading(true);
     try {
       const [{ data: photoRow }, { count: likesCount }, { count: commentsCount }, { data: commentsRows }, userRes] = await Promise.all([
         supabase.from("photos").select("exif, caption").eq("id", p.id).single(),
-        supabase.from("likes").select("id", { count: "exact", head: true }).eq("photo_id", p.id),
-        supabase.from("comments").select("id", { count: "exact", head: true }).eq("photo_id", p.id),
+        supabase.from("likes").select("user_id", { count: "exact" }).eq("photo_id", p.id).limit(0),
+        supabase.from("comments").select("id", { count: "exact" }).eq("photo_id", p.id).limit(0),
         supabase
           .from("comments")
           .select(`id, body, created_at, user_id, author:profiles!comments_user_id_fkey (username, full_name)`) 
@@ -171,7 +171,7 @@ export default function Discover() {
       const me = userRes?.data?.user || null;
       if (me) {
         const { data: likedRow } = await supabase
-          .from("likes").select("id").eq("photo_id", p.id).eq("user_id", me.id).maybeSingle();
+          .from("likes").select("user_id").eq("photo_id", p.id).eq("user_id", me.id).maybeSingle();
         initiallyLiked = !!likedRow;
       }
       setViewerMeta({ caption: photoRow?.caption || p.caption, likesCount: likesCount || 0, commentsCount: commentsCount || 0, initiallyLiked });
@@ -187,10 +187,7 @@ export default function Discover() {
   function prevPhoto() { openViewerAt(viewIndex - 1); }
   function nextPhoto() { openViewerAt(viewIndex + 1); }
 
-  function openViewerCommentsAt(index) {
-    openViewerAt(index);
-    setForceDetailViewer(true);
-  }
+  // openViewerCommentsAt removed (unused)
 
   async function postComment() {
     setCommentErr("");

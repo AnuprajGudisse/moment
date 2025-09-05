@@ -56,7 +56,7 @@ export default function Button({
       className={`${base} ${sizes[size]} ${variants[variant]} ${className}`}
     >
       {showSpinner && (
-        <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-[color-mix(in_oklab,var(--on-brand)_60%,transparent)] border-t-[var(--on-brand)]"></span>
+        <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-[color-mix(in oklab,var(--on-brand) 60%,transparent)] border-t-[var(--on-brand)]"></span>
       )}
       {children}
     </button>

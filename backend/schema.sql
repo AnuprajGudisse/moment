@@ -156,6 +156,37 @@ do $$ begin
   end if;
 end $$;
 
+-- Follows (optional: for followers/following counts)
+create table if not exists public.follows (
+  follower_id uuid not null references auth.users(id) on delete cascade,
+  followed_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (follower_id, followed_id)
+);
+
+create index if not exists follows_followed_idx on public.follows (followed_id);
+create index if not exists follows_follower_idx on public.follows (follower_id);
+
+alter table public.follows enable row level security;
+
+do $$ begin
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='follows' and policyname='Follows are readable by anyone'
+  ) then
+    create policy "Follows are readable by anyone" on public.follows for select using (true);
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='follows' and policyname='Users can follow as themselves'
+  ) then
+    create policy "Users can follow as themselves" on public.follows for insert with check (auth.uid() = follower_id);
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='follows' and policyname='Users can unfollow as themselves'
+  ) then
+    create policy "Users can unfollow as themselves" on public.follows for delete using (auth.uid() = follower_id);
+  end if;
+end $$;
+
 -- Storage: create public bucket and policies for per-user folders
 -- Create bucket if missing
 select extensions.storage.create_bucket('photos', public => true);
@@ -193,4 +224,3 @@ do $$ begin
       );
   end if;
 end $$;
-

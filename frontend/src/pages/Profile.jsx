@@ -2,12 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { publicPhotoUrl } from "../lib/storage";
-import { PencilIcon, ChevronLeftIcon, ChevronRightIcon, CommentIcon, ShareIcon } from "../components/icons";
+import { PencilIcon, ChevronLeftIcon, ChevronRightIcon } from "../components/icons";
 import Button from "../components/Button";
 import Input from "../components/Input";
 import Label from "../components/Label";
 import ErrorText from "../components/ErrorText";
-import Tag from "../components/Tag";
 import SideNav from "../components/SideNav";
 import EditProfileDialog from "../components/EditProfileDialog";
 import BottomNav from "../components/BottomNav";
@@ -15,6 +14,7 @@ import LikeButton from "../components/LikeButton";
 import CommentsDrawer from "../components/CommentsDrawer";
 import FeedCard from "../components/FeedCard";
 
+const ENABLE_FOLLOWS = import.meta.env.VITE_ENABLE_FOLLOWS === 'true';
 const levels = ["Beginner", "Enthusiast", "Professional"];
 const genresAll = ["Street","Portrait","Landscape","Astro","Wildlife","Travel","Urban","Macro","Documentary"];
 
@@ -153,14 +153,14 @@ export default function Profile() {
     })();
   }, [myPhotos, supabase]);
 
-  // Followers/Following counts (optional if table exists)
+  // Followers/Following counts (optional; gated by env to avoid 400 if table absent)
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !ENABLE_FOLLOWS) return;
     (async () => {
       try {
         const [{ count: followers }, { count: following }] = await Promise.all([
-          supabase.from("follows").select("id", { count: "exact", head: true }).eq("followed_id", userId),
-          supabase.from("follows").select("id", { count: "exact", head: true }).eq("follower_id", userId),
+          supabase.from("follows").select("follower_id", { count: "exact" }).eq("followed_id", userId).limit(0),
+          supabase.from("follows").select("followed_id", { count: "exact" }).eq("follower_id", userId).limit(0),
         ]);
         setFollowersCount(followers || 0);
         setFollowingCount(following || 0);
@@ -203,8 +203,8 @@ export default function Profile() {
     try {
       const [{ data: photoRow }, { count: likesCount }, { count: commentsCount }, { data: commentsRows }, userRes] = await Promise.all([
         supabase.from("photos").select("caption, exif").eq("id", photo.id).single(),
-        supabase.from("likes").select("id", { count: "exact", head: true }).eq("photo_id", photo.id),
-        supabase.from("comments").select("id", { count: "exact", head: true }).eq("photo_id", photo.id),
+        supabase.from("likes").select("user_id", { count: "exact" }).eq("photo_id", photo.id).limit(0),
+        supabase.from("comments").select("id", { count: "exact" }).eq("photo_id", photo.id).limit(0),
         supabase
           .from("comments")
           .select(`id, body, created_at, user_id, author:profiles!comments_user_id_fkey (username, full_name)`) 
@@ -216,7 +216,7 @@ export default function Profile() {
       const me = userRes?.data?.user || null;
       if (me) {
         const { data: likedRow } = await supabase
-          .from("likes").select("id").eq("photo_id", photo.id).eq("user_id", me.id).maybeSingle();
+          .from("likes").select("user_id").eq("photo_id", photo.id).eq("user_id", me.id).maybeSingle();
         initiallyLiked = !!likedRow;
       }
       setViewMeta({ caption: photoRow?.caption || photo.caption || "", likesCount: likesCount || 0, commentsCount: commentsCount || 0, initiallyLiked });
