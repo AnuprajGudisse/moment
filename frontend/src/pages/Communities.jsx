@@ -1,12 +1,14 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import SideNav from "../components/SideNav";
 import BottomNav from "../components/BottomNav";
 
 export default function Communities() {
+  const nav = useNavigate();
   const [query, setQuery] = useState("");
   return (
     <div className="min-h-screen bg-[var(--app-bg)]">
-      <SideNav active="communities" onNavigate={(p) => (window.location.href = p)} onLogout={() => {}} query={query} setQuery={setQuery} />
+      <SideNav active="communities" onNavigate={(p) => nav(p)} onLogout={() => {}} query={query} setQuery={setQuery} />
       <main className="mx-auto max-w-6xl px-4 py-6 pb-16 md:pl-[260px]">
         <h1 className="text-2xl font-semibold tracking-tight">Communities</h1>
         <p className="text-sm muted mt-1">Follow interests, join circles, and share your niche.</p>
@@ -14,7 +16,7 @@ export default function Communities() {
           <p className="text-sm muted">Coming soon: Interest hubs, mods, and curated threads.</p>
         </div>
       </main>
-      <BottomNav active="communities" onNavigate={(p) => (window.location.href = p)} />
+      <BottomNav active="communities" onNavigate={(p) => nav(p)} />
     </div>
   );
 }

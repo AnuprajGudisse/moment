@@ -64,7 +64,7 @@ export default function SideNav({
             onClick={() => {
               const isSmall = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
               if (isSmall) {
-                window.location.href = '/new';
+                onNavigate('/new');
               } else if (onUpload) {
                 onUpload();
               } else {

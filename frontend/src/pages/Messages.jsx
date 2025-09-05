@@ -1,12 +1,14 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import SideNav from "../components/SideNav";
 import BottomNav from "../components/BottomNav";
 
 export default function Messages() {
+  const nav = useNavigate();
   const [query, setQuery] = useState("");
   return (
     <div className="min-h-screen bg-[var(--app-bg)]">
-      <SideNav active="messages" onNavigate={(p) => (window.location.href = p)} onLogout={() => {}} query={query} setQuery={setQuery} />
+      <SideNav active="messages" onNavigate={(p) => nav(p)} onLogout={() => {}} query={query} setQuery={setQuery} />
       <main className="mx-auto max-w-6xl px-4 py-6 pb-16 md:pl-[260px]">
         <h1 className="text-2xl font-semibold tracking-tight">Messages</h1>
         <p className="text-sm muted mt-1">Direct messages with other photographers. Share photos, plan shoots.</p>
@@ -14,7 +16,7 @@ export default function Messages() {
           <p className="text-sm muted">Coming soon: 1:1 DMs, group chats, and read receipts.</p>
         </div>
       </main>
-      <BottomNav active="messages" onNavigate={(p) => (window.location.href = p)} />
+      <BottomNav active="messages" onNavigate={(p) => nav(p)} />
     </div>
   );
 }

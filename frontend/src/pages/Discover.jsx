@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { useNavigate } from "react-router-dom";
 import SideNav from "../components/SideNav";
 import BottomNav from "../components/BottomNav";
 import { publicPhotoUrl } from "../lib/storage";
@@ -13,6 +14,7 @@ import Input from "../components/Input";
 const PAGE_SIZE = 30;
 
 export default function Discover() {
+  const nav = useNavigate();
   const [query, setQuery] = useState("");
   const filterText = useMemo(() => query.trim().toLowerCase(), [query]);
 
@@ -212,7 +214,7 @@ export default function Discover() {
     <div className="min-h-screen bg-[var(--app-bg)]">
       <SideNav
         active="discover"
-        onNavigate={(path) => (window.location.href = path)}
+        onNavigate={(path) => nav(path)}
         onLogout={async () => { await supabase.auth.signOut(); }}
         query={query}
         setQuery={setQuery}
@@ -365,7 +367,7 @@ export default function Discover() {
         </>
       )}
       <CommentsDrawer open={!!commentsFor} onClose={() => setCommentsFor(null)} photoId={commentsFor} />
-      <BottomNav active="discover" onNavigate={(path) => (window.location.href = path)} />
+      <BottomNav active="discover" onNavigate={(path) => nav(path)} />
     </div>
   );
 }
