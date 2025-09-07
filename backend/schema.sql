@@ -187,6 +187,26 @@ do $$ begin
   end if;
 end $$;
 
+-- Waitlist (optional: capture landing page signups)
+create table if not exists public.waitlist (
+  id uuid primary key default gen_random_uuid(),
+  email text not null,
+  source text,
+  created_at timestamptz not null default now(),
+  unique(email)
+);
+
+alter table public.waitlist enable row level security;
+
+do $$ begin
+  -- Allow anonymous inserts (no read access by default)
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='waitlist' and policyname='Public can insert waitlist'
+  ) then
+    create policy "Public can insert waitlist" on public.waitlist for insert with check (true);
+  end if;
+end $$;
+
 -- Storage: create public bucket and policies for per-user folders
 -- Create bucket if missing
 select extensions.storage.create_bucket('photos', public => true);

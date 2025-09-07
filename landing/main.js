@@ -121,20 +121,23 @@ const Waitlist = () => {
     h('p', { class: 'sr-only', id: 'waitlist-status', attrs: { role: 'status', 'aria-live': 'polite' } }),
     h('p', { class: 'footnote', text: 'By joining, you agree to receive occasional updates.' }),
   );
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const input = form.querySelector('input');
     const email = (input.value || '').trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
-    try {
-      const key = 'moment_waitlist';
-      const list = JSON.parse(localStorage.getItem(key) || '[]');
-      if (!list.includes(email)) list.push(email);
-      localStorage.setItem(key, JSON.stringify(list));
-    } catch {}
+    // Local success immediately
     input.value = '';
     const status = node.querySelector('#waitlist-status');
     if (status) status.textContent = "Thanks! You're on the list.";
+    // Serverless insert (Vercel)
+    try {
+      await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, source: 'landing' }),
+      });
+    } catch {}
   });
   return node;
 };
@@ -166,3 +169,5 @@ const headerEl = document.querySelector('.header');
 const onScroll = () => headerEl?.classList.toggle('scrolled', window.scrollY > 8);
 onScroll();
 window.addEventListener('scroll', onScroll, { passive: true });
+
+// Serverless handles persistence; no client keys or meta tags needed
