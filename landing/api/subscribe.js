@@ -15,7 +15,7 @@ module.exports = async (req, res) => {
   try {
     const { SUPABASE_URL, SUPABASE_SERVICE_ROLE } = process.env;
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE) {
-      return res.status(500).json({ error: 'Server not configured' });
+      return res.status(500).json({ error: 'Server not configured', hint: 'Set SUPABASE_URL and SUPABASE_SERVICE_ROLE env vars in Vercel' });
     }
 
     let body = req.body;
@@ -41,13 +41,14 @@ module.exports = async (req, res) => {
 
     if (!resp.ok) {
       const text = await resp.text();
+      console.error('Supabase insert failed', resp.status, text);
       return res.status(502).json({ error: 'Upstream insert failed', detail: text });
     }
 
     const data = await resp.json();
     return res.status(200).json({ ok: true, data });
   } catch (e) {
-    return res.status(500).json({ error: 'Unexpected error' });
+    console.error('Subscribe function error', e);
+    return res.status(500).json({ error: 'Unexpected error', detail: e?.message || String(e) });
   }
 };
-
