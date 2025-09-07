@@ -132,11 +132,15 @@ const Waitlist = () => {
     if (status) status.textContent = "Thanks! You're on the list.";
     // Serverless insert (Vercel)
     try {
-      await fetch('/api/subscribe', {
+      const resp = await fetch('/api/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, source: 'landing' }),
       });
+      if (!resp.ok) {
+        const status = node.querySelector('#waitlist-status');
+        if (status) status.textContent = 'Thanks! (We had a hiccup saving; will retry later.)';
+      }
     } catch {}
   });
   return node;
