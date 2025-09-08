@@ -47,3 +47,14 @@ Moment is a community photo app that treats photography as a craft and a convers
 Project layout
 - `frontend/` — React app and UI components
 - `backend/` — FastAPI stub and Supabase SQL schema
+
+### Gags (Job Board)
+
+- Schema: see `backend/schema.sql` for `public.gag_jobs` with RLS:
+  - Read: anyone can read `status = 'open'` gigs; owners can read their own.
+  - Write: owners can insert/update/delete their gigs.
+- UI:
+  - List: `/gags` with search by title/description/location, and quick tags.
+  - Create: `/gags/new` form for title, description, location/remote, type, pay, tags, and contact.
+  - Detail: `/gags/:id` shows full description and contact actions; owners can close a gig.
+- Env: uses existing Supabase settings in `frontend/.env.local` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).

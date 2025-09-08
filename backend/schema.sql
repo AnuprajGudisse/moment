@@ -244,3 +244,112 @@ do $$ begin
       );
   end if;
 end $$;
+
+-- Gag Jobs (job board for photographers)
+create table if not exists public.gag_jobs (
+  id uuid primary key default gen_random_uuid(),
+  created_by uuid not null references auth.users(id) on delete cascade,
+  title text not null,
+  description text not null,
+  location text,
+  is_remote boolean not null default false,
+  job_type text check (job_type in ('one-off','part-time','full-time','collab')) default 'one-off',
+  pay_type text check (pay_type in ('fixed','hourly','day','project')) default 'project',
+  pay_min integer,
+  pay_max integer,
+  pay_currency text default 'USD',
+  tags text[] not null default '{}'::text[],
+  contact_email text,
+  contact_url text,
+  status text not null check (status in ('open','closed','draft')) default 'open',
+  created_at timestamptz not null default now(),
+  expires_at timestamptz
+);
+
+create index if not exists gag_jobs_created_idx on public.gag_jobs (created_at desc);
+create index if not exists gag_jobs_status_idx on public.gag_jobs (status);
+create index if not exists gag_jobs_tags_gin on public.gag_jobs using gin (tags);
+
+alter table public.gag_jobs enable row level security;
+
+do $$ begin
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='gag_jobs' and policyname='Gigs readable if open or owner'
+  ) then
+    create policy "Gigs readable if open or owner" on public.gag_jobs
+      for select using (status = 'open' or auth.uid() = created_by);
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='gag_jobs' and policyname='Users can insert own gigs'
+  ) then
+    create policy "Users can insert own gigs" on public.gag_jobs
+      for insert with check (auth.uid() = created_by);
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='gag_jobs' and policyname='Users can update own gigs'
+  ) then
+    create policy "Users can update own gigs" on public.gag_jobs
+      for update using (auth.uid() = created_by) with check (auth.uid() = created_by);
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='gag_jobs' and policyname='Users can delete own gigs'
+  ) then
+    create policy "Users can delete own gigs" on public.gag_jobs
+      for delete using (auth.uid() = created_by);
+  end if;
+end $$;
+
+-- Applications to Gag Jobs
+create table if not exists public.gag_applications (
+  id uuid primary key default gen_random_uuid(),
+  job_id uuid not null references public.gag_jobs(id) on delete cascade,
+  applicant_id uuid not null references auth.users(id) on delete cascade,
+  message text,
+  portfolio_url text,
+  status text not null check (status in ('applied','reviewed','accepted','rejected')) default 'applied',
+  created_at timestamptz not null default now(),
+  unique (job_id, applicant_id)
+);
+
+create index if not exists gag_applications_job_idx on public.gag_applications (job_id);
+create index if not exists gag_applications_applicant_idx on public.gag_applications (applicant_id);
+
+alter table public.gag_applications enable row level security;
+
+do $$ begin
+  -- Applicants can insert their own application
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='gag_applications' and policyname='Applicants can insert own application'
+  ) then
+    create policy "Applicants can insert own application" on public.gag_applications
+      for insert with check (auth.uid() = applicant_id);
+  end if;
+  -- Applicants can read their own application
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='gag_applications' and policyname='Applicants can read own application'
+  ) then
+    create policy "Applicants can read own application" on public.gag_applications
+      for select using (auth.uid() = applicant_id);
+  end if;
+  -- Job owners can read applications to their jobs
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='gag_applications' and policyname='Owners can read applications to their jobs'
+  ) then
+    create policy "Owners can read applications to their jobs" on public.gag_applications
+      for select using (exists (select 1 from public.gag_jobs j where j.id = job_id and j.created_by = auth.uid()));
+  end if;
+  -- Job owners can update status for their jobs' applications
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='gag_applications' and policyname='Owners can update application status'
+  ) then
+    create policy "Owners can update application status" on public.gag_applications
+      for update using (exists (select 1 from public.gag_jobs j where j.id = job_id and j.created_by = auth.uid()));
+  end if;
+  -- Applicants can delete their application (optional)
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='gag_applications' and policyname='Applicants can delete own application'
+  ) then
+    create policy "Applicants can delete own application" on public.gag_applications
+      for delete using (auth.uid() = applicant_id);
+  end if;
+end $$;

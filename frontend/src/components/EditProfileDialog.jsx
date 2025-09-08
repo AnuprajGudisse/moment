@@ -2,6 +2,7 @@ import Button from "./Button";
 import Input from "./Input";
 import Label from "./Label";
 import Tag from "./Tag";
+import Select from "./Select";
 
 export default function EditProfileDialog({
   open,
@@ -56,16 +57,11 @@ export default function EditProfileDialog({
             </div>
             <div>
               <Label htmlFor="level">Experience level</Label>
-              <select
-                id="level"
-                value={level}
-                onChange={(e) => setLevel(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-sm shadow-sm outline-none transition focus:ring-2 focus:ring-[var(--ring)]"
-              >
+              <Select id="level" value={level} onChange={(v) => setLevel(v)} className="mt-1">
                 {levels.map((l) => (
                   <option key={l} value={l}>{l}</option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="md:col-span-2">
               <Label>Genres</Label>
@@ -93,4 +89,3 @@ export default function EditProfileDialog({
 const GENRES = [
   "Street","Portrait","Landscape","Astro","Wildlife","Travel","Urban","Macro","Documentary"
 ];
-

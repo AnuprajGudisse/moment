@@ -6,6 +6,7 @@ import Label from "../components/Label";
 import ErrorText from "../components/ErrorText";
 import AuthShell from "../components/AuthShell";
 import Tag from "../components/Tag";
+import Select from "../components/Select";
 import { supabase } from "../lib/supabase";
 
 const validateEmail = (v) => /^[^ @]+@[^ @]+[.][^ @]+$/.test(v);
@@ -134,16 +135,11 @@ export default function Signup() {
 
           <div>
             <Label htmlFor="level">Experience level</Label>
-            <select
-              id="level"
-              value={level}
-              onChange={(e) => setLevel(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--card-bg)] px-3 py-2 text-sm shadow-sm outline-none transition focus:ring-2 focus:ring-[var(--ring)]"
-            >
+            <Select id="level" value={level} onChange={(v) => setLevel(v)} className="mt-1">
               {levels.map((l) => (
                 <option key={l} value={l}>{l}</option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div>

@@ -11,6 +11,9 @@ import Profile from "./pages/Profile";
 import NewPost from "./pages/NewPost";
 import Events from "./pages/Events";
 import Gags from "./pages/Gags";
+import GagNew from "./pages/GagNew";
+import GagDetail from "./pages/GagDetail";
+import MyApplications from "./pages/MyApplications";
 import Communities from "./pages/Communities";
 import Trending from "./pages/Trending";
 import Messages from "./pages/Messages";
@@ -56,6 +59,9 @@ const router = createBrowserRouter([
   { path: "/new", element: <AuthGate><NewPost /></AuthGate> },
   { path: "/events", element: <AuthGate><Events /></AuthGate> },
   { path: "/gags", element: <AuthGate><Gags /></AuthGate> },
+  { path: "/gags/new", element: <AuthGate><GagNew /></AuthGate> },
+  { path: "/gags/:id", element: <AuthGate><GagDetail /></AuthGate> },
+  { path: "/gags/applications", element: <AuthGate><MyApplications /></AuthGate> },
   { path: "/communities", element: <AuthGate><Communities /></AuthGate> },
   { path: "/trending", element: <AuthGate><Trending /></AuthGate> },
   { path: "/messages", element: <AuthGate><Messages /></AuthGate> },
