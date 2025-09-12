@@ -9,9 +9,10 @@ import Divider from "../components/Divider";
 import { supabase } from "../lib/supabase";
 
 const validateEmail = (v) => /^[^ @]+@[^ @]+[.][^ @]+$/.test(v);
+const normalizeHandle = (v) => v.startsWith("@") ? v.slice(1) : v;
 
 export default function Login() {
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState(""); // email or username
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [errors, setErrors] = useState({});
@@ -21,16 +22,34 @@ export default function Login() {
   async function submit(e) {
     e.preventDefault();
     const next = {};
-    if (!validateEmail(email)) next.email = "Enter a valid email.";
+    if (!identifier.trim()) next.identifier = "Enter email or @username.";
     if (password.length < 6) next.password = "Password must be at least 6 characters.";
     setErrors(next);
     if (Object.keys(next).length) return;
 
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    // Resolve identifier → email (if username provided)
+    let loginEmail = identifier.trim();
+    if (!validateEmail(loginEmail)) {
+      // Treat as username; strip leading '@'
+      const handle = normalizeHandle(loginEmail);
+      const { data: prof, error: pErr } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('username', handle)
+        .maybeSingle();
+      if (pErr || !prof?.email) {
+        setLoading(false);
+        setErrors({ identifier: "No account found for that username.", password: " " });
+        return;
+      }
+      loginEmail = prof.email;
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
     setLoading(false);
     if (error) {
-      setErrors({ email: " ", password: error.message }); // surface message near password
+      setErrors({ identifier: " ", password: error.message }); // surface message near password
       return;
     }
     nav("/home");
@@ -57,9 +76,15 @@ export default function Login() {
 
         <form onSubmit={submit} className="mt-6 space-y-4">
           <div>
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" value={email} onChange={setEmail} placeholder="you@example.com" autoComplete="email" />
-            <ErrorText>{errors.email}</ErrorText>
+            <Label htmlFor="identifier">Email or username</Label>
+            <Input
+              id="identifier"
+              value={identifier}
+              onChange={setIdentifier}
+              placeholder="you@example.com or yourhandle"
+              autoComplete="username"
+            />
+            <ErrorText>{errors.identifier}</ErrorText>
           </div>
 
           <div>

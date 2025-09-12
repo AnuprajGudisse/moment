@@ -14,6 +14,9 @@ create table if not exists public.profiles (
   genres text[] default '{}'::text[]
 );
 
+-- Backfill-safe: ensure an email column exists for username login lookups
+alter table public.profiles add column if not exists email text;
+
 alter table public.profiles enable row level security;
 
 do $$ begin
@@ -41,8 +44,12 @@ language plpgsql
 security definer set search_path = public
 as $$
 begin
-  insert into public.profiles (id, full_name)
-  values (new.id, coalesce(new.raw_user_meta_data->>'full_name', ''))
+  insert into public.profiles (id, full_name, email)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'full_name', ''),
+    new.email
+  )
   on conflict (id) do nothing;
   return new;
 end; $$;
@@ -51,6 +58,25 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- Keep profile email/full_name in sync when auth.users changes
+create or replace function public.handle_updated_user()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  update public.profiles p
+    set full_name = coalesce(new.raw_user_meta_data->>'full_name', p.full_name),
+        email = new.email
+  where p.id = new.id;
+  return new;
+end; $$;
+
+drop trigger if exists on_auth_user_updated on auth.users;
+create trigger on_auth_user_updated
+  after update on auth.users
+  for each row execute function public.handle_updated_user();
 
 -- Photos
 create table if not exists public.photos (

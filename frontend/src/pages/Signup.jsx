@@ -81,6 +81,7 @@ export default function Signup() {
         location,
         level,
         genres,
+        email, // keep profiles.email in sync for username login
       }).eq("id", user.id);
     } catch {
       /* swallow for now; user can complete profile later */
