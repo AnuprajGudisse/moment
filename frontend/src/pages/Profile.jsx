@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { publicPhotoUrl } from "../lib/storage";
 import { PencilIcon, ChevronLeftIcon, ChevronRightIcon } from "../components/icons";
@@ -20,6 +20,7 @@ const genresAll = ["Street","Portrait","Landscape","Astro","Wildlife","Travel","
 
 export default function Profile() {
   const nav = useNavigate();
+  const [search] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
@@ -34,6 +35,7 @@ export default function Profile() {
   const [myPhotos, setMyPhotos] = useState([]);
 
   const [editing, setEditing] = useState(false);
+  const [isOwner, setIsOwner] = useState(true);
   const [activeTab, setActiveTab] = useState("posts"); // posts | albums | clips
 
   const [followersCount, setFollowersCount] = useState(0);
@@ -57,13 +59,15 @@ export default function Profile() {
     (async () => {
       const { data: userData, error: uErr } = await supabase.auth.getUser();
       if (uErr || !userData.user) { nav("/login"); return; }
-      const uid = userData.user.id;
-      setUserId(uid);
+      const meId = userData.user.id;
+      const targetId = search.get('user') || meId;
+      setUserId(targetId);
+      setIsOwner(targetId === meId);
 
       const { data, error } = await supabase
         .from("profiles")
         .select("full_name, username, location, level, genres")
-        .eq("id", uid)
+        .eq("id", targetId)
         .single();
 
       if (mounted) {
@@ -79,7 +83,7 @@ export default function Profile() {
       }
     })();
     return () => { mounted = false; };
-  }, [nav]);
+  }, [nav, search, supabase]);
 
   // Load my recent photos for grid preview
   useEffect(() => {
@@ -306,9 +310,11 @@ export default function Profile() {
           <section className="mb-6">
             <div className="relative">
               <div className="h-40 md:h-48 w-full rounded-xl border" style={{ borderColor: "var(--border)", background: "var(--hover)" }} />
-              <div className="absolute top-3 right-3">
-                <Button size="sm" variant="outline" onClick={() => window.dispatchEvent(new CustomEvent('open-upload'))}>Change header</Button>
-              </div>
+              {isOwner && (
+                <div className="absolute top-3 right-3">
+                  <Button size="sm" variant="outline" onClick={() => window.dispatchEvent(new CustomEvent('open-upload'))}>Change header</Button>
+                </div>
+              )}
               <div className="absolute -bottom-8 left-4 h-24 w-24 md:h-28 md:w-28 rounded-full flex items-center justify-center border shadow-sm" style={{ borderColor: "var(--border)", background: "var(--card-bg)" }}>
                 <div className="h-[90%] w-[90%] rounded-full flex items-center justify-center" style={{ background: "var(--hover)" }}>
                   <span className="text-lg md:text-xl font-semibold muted">
@@ -346,7 +352,7 @@ export default function Profile() {
                   </div>
                 </div>
               </div>
-              {!editing && (
+              {!editing && isOwner && (
                 <div className="hidden md:block">
                   <Button variant="outline" onClick={() => setEditing(true)} className="inline-flex items-center gap-2">
                     <PencilIcon size={16} />
@@ -356,7 +362,7 @@ export default function Profile() {
               )}
             </div>
 
-            {!editing && (
+            {!editing && isOwner && (
               <div className="mt-3 md:hidden">
                 <Button variant="outline" onClick={() => setEditing(true)} className="w-full inline-flex items-center justify-center gap-2">
                   <PencilIcon size={16} />

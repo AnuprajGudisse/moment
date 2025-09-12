@@ -245,6 +245,239 @@ do $$ begin
   end if;
 end $$;
 
+-- Communities (public groups of interest)
+create table if not exists public.communities (
+  id uuid primary key default gen_random_uuid(),
+  slug text unique,
+  name text not null,
+  description text,
+  cover_url text,
+  created_by uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists communities_created_idx on public.communities (created_at desc);
+
+alter table public.communities enable row level security;
+
+do $$ begin
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='communities' and policyname='Communities readable by anyone'
+  ) then
+    create policy "Communities readable by anyone" on public.communities for select using (true);
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='communities' and policyname='Users can create communities'
+  ) then
+    create policy "Users can create communities" on public.communities for insert with check (auth.uid() = created_by);
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='communities' and policyname='Owners can update community'
+  ) then
+    create policy "Owners can update community" on public.communities for update using (auth.uid() = created_by) with check (auth.uid() = created_by);
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='communities' and policyname='Owners can delete community'
+  ) then
+    create policy "Owners can delete community" on public.communities for delete using (auth.uid() = created_by);
+  end if;
+end $$;
+
+-- Community membership
+create table if not exists public.community_members (
+  community_id uuid not null references public.communities(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  role text not null default 'member' check (role in ('member','moderator','owner')),
+  joined_at timestamptz not null default now(),
+  primary key (community_id, user_id)
+);
+
+alter table public.community_members enable row level security;
+
+do $$ begin
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='community_members' and policyname='Members readable by anyone'
+  ) then
+    create policy "Members readable by anyone" on public.community_members for select using (true);
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='community_members' and policyname='Users can join communities'
+  ) then
+    create policy "Users can join communities" on public.community_members for insert with check (auth.uid() = user_id);
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='community_members' and policyname='Users can leave communities'
+  ) then
+    create policy "Users can leave communities" on public.community_members for delete using (auth.uid() = user_id);
+  end if;
+end $$;
+
+-- Posts mapped to existing photos via a join table
+create table if not exists public.community_photo_posts (
+  id uuid primary key default gen_random_uuid(),
+  community_id uuid not null references public.communities(id) on delete cascade,
+  photo_id uuid not null references public.photos(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (community_id, photo_id)
+);
+
+create index if not exists cpp_comm_created_idx on public.community_photo_posts (community_id, created_at desc);
+
+alter table public.community_photo_posts enable row level security;
+
+do $$ begin
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='community_photo_posts' and policyname='Community posts readable by anyone'
+  ) then
+    create policy "Community posts readable by anyone" on public.community_photo_posts for select using (true);
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='community_photo_posts' and policyname='Members can post photos'
+  ) then
+    create policy "Members can post photos" on public.community_photo_posts
+      for insert with check (
+        auth.uid() = user_id
+        and exists (
+          select 1 from public.community_members m
+          where m.community_id = community_id and m.user_id = auth.uid()
+        )
+      );
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='community_photo_posts' and policyname='Owners can remove own posts'
+  ) then
+    create policy "Owners can remove own posts" on public.community_photo_posts for delete using (auth.uid() = user_id);
+  end if;
+end $$;
+
+-- Generic community posts (text/photo/link)
+create table if not exists public.community_posts (
+  id uuid primary key default gen_random_uuid(),
+  community_id uuid not null references public.communities(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  kind text not null check (kind in ('text','photo','link')),
+  body text,
+  photo_id uuid references public.photos(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists community_posts_comm_created_idx on public.community_posts (community_id, created_at desc);
+
+alter table public.community_posts enable row level security;
+
+do $$ begin
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='community_posts' and policyname='Community posts readable by anyone'
+  ) then
+    create policy "Community posts readable by anyone" on public.community_posts for select using (true);
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='community_posts' and policyname='Members can create posts'
+  ) then
+    create policy "Members can create posts" on public.community_posts
+      for insert with check (
+        auth.uid() = user_id
+        and exists (
+          select 1 from public.community_members m
+          where m.community_id = community_id and m.user_id = auth.uid()
+        )
+      );
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='community_posts' and policyname='Owners can update own posts'
+  ) then
+    create policy "Owners can update own posts" on public.community_posts for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='community_posts' and policyname='Owners can delete own posts'
+  ) then
+    create policy "Owners can delete own posts" on public.community_posts for delete using (auth.uid() = user_id);
+  end if;
+end $$;
+
+-- Enhance community_posts with title and optional link URL (idempotent)
+alter table public.community_posts
+  add column if not exists title text not null default '';
+alter table public.community_posts
+  add column if not exists link_url text;
+
+-- Likes on community posts
+create table if not exists public.community_post_likes (
+  post_id uuid not null references public.community_posts(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (post_id, user_id)
+);
+
+alter table public.community_post_likes enable row level security;
+
+do $$ begin
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='community_post_likes' and policyname='Likes readable by anyone'
+  ) then
+    create policy "Likes readable by anyone" on public.community_post_likes for select using (true);
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='community_post_likes' and policyname='Users can like as themselves'
+  ) then
+    create policy "Users can like as themselves" on public.community_post_likes for insert with check (auth.uid() = user_id);
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='community_post_likes' and policyname='Users can unlike own like'
+  ) then
+    create policy "Users can unlike own like" on public.community_post_likes for delete using (auth.uid() = user_id);
+  end if;
+end $$;
+
+-- Comments on community posts
+create table if not exists public.community_post_comments (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references public.community_posts(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists community_post_comments_post_created_idx on public.community_post_comments (post_id, created_at);
+
+alter table public.community_post_comments enable row level security;
+
+do $$ begin
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='community_post_comments' and policyname='Comments readable by anyone'
+  ) then
+    create policy "Comments readable by anyone" on public.community_post_comments for select using (true);
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='community_post_comments' and policyname='Members can comment'
+  ) then
+    create policy "Members can comment" on public.community_post_comments
+      for insert with check (
+        auth.uid() = user_id
+        and exists (
+          select 1 from public.community_members m
+          join public.community_posts p on p.community_id = m.community_id
+          where p.id = post_id and m.user_id = auth.uid()
+        )
+      );
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='community_post_comments' and policyname='Users can update own comments'
+  ) then
+    create policy "Users can update own comments" on public.community_post_comments for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='community_post_comments' and policyname='Users can delete own comments'
+  ) then
+    create policy "Users can delete own comments" on public.community_post_comments for delete using (auth.uid() = user_id);
+  end if;
+end $$;
+
+-- Optional threading support: parent_id on comments (flat by default)
+alter table public.community_post_comments
+  add column if not exists parent_id uuid references public.community_post_comments(id) on delete cascade;
+
 -- Gag Jobs (job board for photographers)
 create table if not exists public.gag_jobs (
   id uuid primary key default gen_random_uuid(),

@@ -13,8 +13,10 @@ import Events from "./pages/Events";
 import Gags from "./pages/Gags";
 import GagNew from "./pages/GagNew";
 import GagDetail from "./pages/GagDetail";
+import MyJobs from "./pages/MyJobs";
 import MyApplications from "./pages/MyApplications";
 import Communities from "./pages/Communities";
+import CommunityDetail from "./pages/CommunityDetail";
 import Trending from "./pages/Trending";
 import Messages from "./pages/Messages";
 
@@ -61,8 +63,10 @@ const router = createBrowserRouter([
   { path: "/gags", element: <AuthGate><Gags /></AuthGate> },
   { path: "/gags/new", element: <AuthGate><GagNew /></AuthGate> },
   { path: "/gags/:id", element: <AuthGate><GagDetail /></AuthGate> },
+  { path: "/gags/my-jobs", element: <AuthGate><MyJobs /></AuthGate> },
   { path: "/gags/applications", element: <AuthGate><MyApplications /></AuthGate> },
   { path: "/communities", element: <AuthGate><Communities /></AuthGate> },
+  { path: "/communities/:id", element: <AuthGate><CommunityDetail /></AuthGate> },
   { path: "/trending", element: <AuthGate><Trending /></AuthGate> },
   { path: "/messages", element: <AuthGate><Messages /></AuthGate> },
 ]);

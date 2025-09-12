@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import SideNav from "../components/SideNav";
 import BottomNav from "../components/BottomNav";
 import Button from "../components/Button";
@@ -81,6 +81,8 @@ export default function GagDetail() {
   const [applying, setApplying] = useState(false);
   const [alreadyApplied, setAlreadyApplied] = useState(false);
   const [ownerApps, setOwnerApps] = useState([]);
+  const [applicantNames, setApplicantNames] = useState({}); // id -> { username, full_name }
+  const [updating, setUpdating] = useState({}); // appId -> bool
 
   useEffect(() => {
     let active = true;
@@ -127,6 +129,19 @@ export default function GagDetail() {
           .order('created_at', { ascending: false });
         if (!active) return;
         setOwnerApps(apps || []);
+        // Load applicant profiles for nicer display
+        const ids = Array.from(new Set((apps || []).map((a) => a.applicant_id)));
+        if (ids.length) {
+          const { data: profs } = await supabase
+            .from('profiles')
+            .select('id, username, full_name')
+            .in('id', ids);
+          if (!active) return;
+          const map = Object.fromEntries((profs || []).map((p) => [p.id, { username: p.username, full_name: p.full_name }]));
+          setApplicantNames(map);
+        } else {
+          setApplicantNames({});
+        }
       }
     }
     loadAux();
@@ -248,7 +263,13 @@ export default function GagDetail() {
                       <li key={a.id} className="rounded-xl border p-3" style={{ borderColor: 'var(--border)' }}>
                         <div className="flex items-start justify-between gap-3 text-sm">
                           <div className="min-w-0">
-                            <div className="font-medium" style={{ color: 'var(--text)' }}>Applicant: {a.applicant_id.slice(0, 8)}…</div>
+                            <div className="font-medium" style={{ color: 'var(--text)' }}>
+                              Applicant: {(
+                                <Link to={`/profile?user=${a.applicant_id}`} className="underline">
+                                  {applicantNames[a.applicant_id]?.username || applicantNames[a.applicant_id]?.full_name || `${a.applicant_id.slice(0,8)}…`}
+                                </Link>
+                              )}
+                            </div>
                             {a.message && (
                               <div className="mt-1 whitespace-pre-wrap" style={{ color: 'var(--muted)' }}>{a.message}</div>
                             )}
@@ -256,7 +277,30 @@ export default function GagDetail() {
                               <a href={a.portfolio_url} className="mt-1 inline-block underline" target="_blank" rel="noreferrer">Portfolio</a>
                             )}
                           </div>
-                          <span className="rounded-full border px-2 py-0.5 text-xs shrink-0" style={{ borderColor: 'var(--border)', color: 'var(--muted)' }}>{a.status}</span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <select
+                              value={a.status}
+                              onChange={async (e) => {
+                                const next = e.target.value;
+                                setUpdating((m) => ({ ...m, [a.id]: true }));
+                                const { error } = await supabase.from('gag_applications').update({ status: next }).eq('id', a.id);
+                                setUpdating((m) => ({ ...m, [a.id]: false }));
+                                if (!error) {
+                                  setOwnerApps((list) => list.map((row) => row.id === a.id ? { ...row, status: next } : row));
+                                }
+                              }}
+                              className="rounded-xl bg-[var(--hover)] px-2 py-1 text-xs"
+                            >
+                              <option value="applied">applied</option>
+                              <option value="reviewed">reviewed</option>
+                              <option value="accepted">accepted</option>
+                              <option value="rejected">rejected</option>
+                            </select>
+                            <Button size="sm" variant="outline" onClick={() => nav(`/messages?to=${a.applicant_id}`)}>
+                              Message
+                            </Button>
+                            {updating[a.id] && <span className="text-xs" style={{ color: 'var(--muted)' }}>Saving…</span>}
+                          </div>
                         </div>
                       </li>
                     ))}

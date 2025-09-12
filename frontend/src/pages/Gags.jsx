@@ -61,6 +61,28 @@ export default function Gags() {
   const [myApps, setMyApps] = useState([]); // [{ job_id, status, created_at, title, job_status }]
   const [showAdvanced, setShowAdvanced] = useState(false);
 
+  function ActiveFilters() {
+    const chips = [];
+    const push = (label, onClear) => chips.push(
+      <button key={label} onClick={onClear} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs" style={{ background: 'var(--hover)', color: 'var(--text)' }}>
+        {label} <span aria-hidden>×</span>
+      </button>
+    );
+    if (query.trim()) push(`“${query.trim()}”`, () => setQuery(""));
+    if (filters.remoteOnly) push('Remote', () => setFilters((f) => ({ ...f, remoteOnly: false })));
+    if (filters.jobType) push(filters.jobType, () => setFilters((f) => ({ ...f, jobType: "" })));
+    if (filters.payType) push(filters.payType, () => setFilters((f) => ({ ...f, payType: "" })));
+    if (filters.minPay) push(`≥ ${filters.minPay}`, () => setFilters((f) => ({ ...f, minPay: "" })));
+    if (filters.tags.trim()) push(filters.tags.split(',').map((t) => t.trim()).filter(Boolean).join(', '), () => setFilters((f) => ({ ...f, tags: "" })));
+    if (chips.length === 0) return null;
+    return (
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {chips}
+        <button onClick={() => { setQuery(""); setFilters({ remoteOnly: false, jobType: "", payType: "", minPay: "", tags: "" }); }} className="text-xs underline" style={{ color: 'var(--muted)' }}>Clear all</button>
+      </div>
+    );
+  }
+
   useEffect(() => {
     let active = true;
     async function load() {
@@ -173,6 +195,10 @@ export default function Gags() {
 
         <div className="mt-4 grid gap-4 md:grid-cols-4">
           <div className="md:col-span-3">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="text-xs" style={{ color: 'var(--muted)' }}>{gigs.length} {gigs.length === 1 ? 'gig' : 'gigs'}</div>
+            </div>
+            <ActiveFilters />
             {loading ? (
               <div className="rounded-2xl border p-6" style={{ borderColor: 'var(--border)', background: 'var(--card-bg)' }}>
                 <p className="text-sm" style={{ color: 'var(--muted)' }}>Loading gigs…</p>
@@ -191,6 +217,9 @@ export default function Gags() {
               <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>Share a job, collab, or assignment.</p>
               <Button className="mt-3 w-full" onClick={() => nav('/gags/new')}>
                 <PlusIcon size={18} className="mr-2" /> Post a Gig
+              </Button>
+              <Button className="mt-2 w-full" variant="outline" onClick={() => nav('/gags/my-jobs')}>
+                Manage My Jobs
               </Button>
             </div>
 
