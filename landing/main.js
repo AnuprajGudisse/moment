@@ -70,7 +70,7 @@ const Gags = () => section('gags', 'Gags',
     h('article', { class: 'card reveal' }, h('h3', { text: 'Apply with your work' }), h('p', { text: 'Show relevant projects, availability, and rates — all in one place.' })),
   ),
   h('div', { class: 'media-grid' }, 
-    h('img', { class: 'shot shot-wide reveal', attrs: { src: './assets/img/gags.png', alt: 'Gags job board showing photography opportunities' } }),
+    h('img', { class: 'shot shot-wide reveal', attrs: { src: './assets/img/gags.jpg', alt: 'Gags job board showing photography opportunities' } }),
   ),
 );
 
@@ -81,7 +81,7 @@ const Communities = () => section('communities', 'Communities',
     h('article', { class: 'card reveal' }, h('h3', { text: 'By place' }), h('p', { text: 'Local scenes and meetups to turn online inspiration into real shoots.' })),
   ),
   h('div', { class: 'media-grid' }, 
-    h('img', { class: 'shot shot-wide reveal', attrs: { src: './assets/img/communities.png', alt: 'Communities overview page' } }),
+    h('img', { class: 'shot shot-wide reveal', attrs: { src: './assets/img/communities.jpg', alt: 'Communities overview page' } }),
   ),
 );
 
@@ -104,14 +104,14 @@ const FutureFeatures = () => section('future', 'Coming Soon',
 
 const Gallery = () => {
   const images = [
-    { src: './assets/img/login.png', alt: 'Login page with clean authentication interface' },
-    { src: './assets/img/gig-post.png', alt: 'Creating a new gig post' },
-    { src: './assets/img/job application.png', alt: 'Job application interface for photographers' },
-    { src: './assets/img/individual community page.png', alt: 'Individual community page showing member posts' },
-    { src: './assets/img/discover.png', alt: 'Discover page for finding new photographers' },
-    { src: './assets/img/post.png', alt: 'Individual post view with EXIF data and comments' },
-    { src: './assets/img/profile.png', alt: 'Photographer profile page' },
-    { src: './assets/img/job-poster.png', alt: 'Job posting interface' },
+    { src: './assets/img/login.jpg', alt: 'Login page with clean authentication interface' },
+    { src: './assets/img/gig-post.jpg', alt: 'Creating a new gig post' },
+    { src: './assets/img/job application.jpg', alt: 'Job application interface for photographers' },
+    { src: './assets/img/individual community page.jpg', alt: 'Individual community page showing member posts' },
+    { src: './assets/img/discover.jpg', alt: 'Discover page for finding new photographers' },
+    { src: './assets/img/post.jpg', alt: 'Individual post view with EXIF data and comments' },
+    { src: './assets/img/profile.jpg', alt: 'Photographer profile page' },
+    { src: './assets/img/job-poster.jpg', alt: 'Job posting interface' },
   ];
 
   const galleryContainer = h('div', { class: 'gallery-container reveal' });
@@ -293,7 +293,7 @@ const Footer = () => h('footer', { class: 'wrap footer' }, h('p', { html: `© <s
 // Mount
 const HomePreview = () => section('home', 'A look at the homepage',
   h('div', { class: 'media-grid' },
-    h('img', { class: 'shot shot-wide reveal', attrs: { src: './assets/img/homepage.png', alt: 'Moment homepage showing curated photography feed' } }),
+    h('img', { class: 'shot shot-wide reveal', attrs: { src: './assets/img/homepage.jpg', alt: 'Moment homepage showing curated photography feed' } }),
   ),
 );
 
