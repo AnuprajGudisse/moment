@@ -18,6 +18,29 @@ const ENABLE_FOLLOWS = import.meta.env.VITE_ENABLE_FOLLOWS === 'true';
 const levels = ["Beginner", "Enthusiast", "Professional"];
 const genresAll = ["Street","Portrait","Landscape","Astro","Wildlife","Travel","Urban","Macro","Documentary"];
 
+function normalizeGenres(val) {
+  if (Array.isArray(val)) return val.filter(Boolean);
+  if (val == null) return [];
+  // Try JSON string like '["Street","Portrait"]'
+  if (typeof val === 'string') {
+    const s = val.trim();
+    if (!s) return [];
+    try {
+      const j = JSON.parse(s);
+      if (Array.isArray(j)) return j.filter(Boolean);
+    } catch {}
+    // Try Postgres array literal: {Street,Portrait}
+    if (s.startsWith('{') && s.endsWith('}')) {
+      return s.slice(1, -1)
+        .split(',')
+        .map(x => x.replace(/^"|"$/g, ''))
+        .map(x => x.trim())
+        .filter(Boolean);
+    }
+  }
+  return [];
+}
+
 export default function Profile() {
   const nav = useNavigate();
   const [search] = useSearchParams();
@@ -77,7 +100,7 @@ export default function Profile() {
           setUsername(data.username ?? "");
           setLocation(data.location ?? "");
           setLevel(data.level ?? levels[0]);
-          setGenres(Array.isArray(data.genres) ? data.genres : []);
+          setGenres(normalizeGenres(data.genres));
         }
         setLoading(false);
       }
@@ -89,23 +112,34 @@ export default function Profile() {
   useEffect(() => {
     if (!userId) return;
     (async () => {
+      // First, get all photo IDs that are used in community posts
+      const { data: communityPhotoIds } = await supabase
+        .from("community_posts")
+        .select("photo_id")
+        .not("photo_id", "is", null);
+      
+      const excludeIds = new Set((communityPhotoIds || []).map(row => row.photo_id).filter(Boolean));
+
       const { data, error } = await supabase
         .from("photos")
         .select("id, storage_path, exif, created_at, caption")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
-        .limit(24);
+        .limit(48); // Get more to account for filtering
       if (error) return; // keep silent for now
-      setMyPhotos((data || []).map((p) => ({
-        id: p.id,
-        url: publicPhotoUrl(p.storage_path),
-        aspect: (() => {
-          const w = p.exif?.width ?? 0, h = p.exif?.height ?? 0;
-          return w && h ? `${w} / ${h}` : "1 / 1";
-        })(),
-        caption: p.caption || "",
-        created_at: p.created_at,
-      })));
+      setMyPhotos((data || [])
+        .filter(p => !excludeIds.has(p.id)) // Filter out community photos
+        .slice(0, 24) // Limit to 24 photos
+        .map((p) => ({
+          id: p.id,
+          url: publicPhotoUrl(p.storage_path),
+          aspect: (() => {
+            const w = p.exif?.width ?? 0, h = p.exif?.height ?? 0;
+            return w && h ? `${w} / ${h}` : "1 / 1";
+          })(),
+          caption: p.caption || "",
+          created_at: p.created_at,
+        })));
     })();
   }, [userId, supabase]);
 

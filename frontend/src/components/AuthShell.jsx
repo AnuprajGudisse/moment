@@ -16,28 +16,28 @@ export default function AuthShell({ children, footer, onBackHome }) {
         </div>
         <div className="max-w-md w-full mx-auto">{children}</div>
         <div className="max-w-md w-full mx-auto">{footer}</div>
-        <p className="mt-auto text-xs text-gray-400">
+        <p className="mt-auto text-xs text-[var(--muted)]">
           © {new Date().getFullYear()} moment. All rights reserved.
         </p>
       </div>
 
       {/* Right Pane (Showcase) */}
-      <div className="hidden md:block relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-800" />
+      <div className="hidden md:block relative overflow-hidden bg-[var(--background)]">
+        <div className="absolute inset-0 border-l border-[var(--border)]" />
         {/* Fake masonry preview boxes */}
         <div className="absolute inset-0 p-8 grid grid-cols-3 gap-4">
           {[...Array(12)].map((_, i) => (
             <div
               key={i}
-              className={`rounded-2xl bg-gradient-to-br from-neutral-700 to-neutral-900/60 shadow-inner ${
+              className={`rounded-2xl bg-[var(--card)] border border-[var(--border)] ${
                 i % 5 === 0 ? "col-span-2 row-span-2" : ""
               }`}
             />
           ))}
         </div>
-        <div className="absolute bottom-8 left-8 text-white/90">
+        <div className="absolute bottom-8 left-8 text-[var(--text)]">
           <h2 className="text-2xl font-semibold">Share photos. Meet creatives. Grow together.</h2>
-          <p className="text-sm text-white/70 mt-1">A social platform built for photographers.</p>
+          <p className="text-sm text-[var(--muted)] mt-1">A social platform built for photographers.</p>
         </div>
       </div>
     </div>

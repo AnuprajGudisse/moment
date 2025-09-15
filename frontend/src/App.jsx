@@ -17,6 +17,7 @@ import MyJobs from "./pages/MyJobs";
 import MyApplications from "./pages/MyApplications";
 import Communities from "./pages/Communities";
 import CommunityDetail from "./pages/CommunityDetail";
+import PostDetail from "./pages/PostDetail";
 import Trending from "./pages/Trending";
 import Messages from "./pages/Messages";
 
@@ -67,6 +68,7 @@ const router = createBrowserRouter([
   { path: "/gags/applications", element: <AuthGate><MyApplications /></AuthGate> },
   { path: "/communities", element: <AuthGate><Communities /></AuthGate> },
   { path: "/communities/:id", element: <AuthGate><CommunityDetail /></AuthGate> },
+  { path: "/posts/:id", element: <AuthGate><PostDetail /></AuthGate> },
   { path: "/trending", element: <AuthGate><Trending /></AuthGate> },
   { path: "/messages", element: <AuthGate><Messages /></AuthGate> },
 ]);

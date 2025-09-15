@@ -5,6 +5,182 @@ import BottomNav from "../components/BottomNav";
 import Button from "../components/Button";
 import { supabase } from "../lib/supabase";
 import { makePhotoKey } from "../lib/storage";
+import { 
+  UsersIcon as Users, 
+  CommentIcon as MessageSquare, 
+  PlusIcon as Plus, 
+  Check, 
+  FileText, 
+  UserIcon as User, 
+  ImageIcon as Image, 
+  Upload, 
+  X, 
+  Globe, 
+  ExternalLink, 
+  LikeIcon as Heart, 
+  Send, 
+  Info, 
+  CalendarIcon as Calendar, 
+  Shield, 
+  Crown, 
+  BookOpen 
+} from "../components/icons";
+
+// Recursive comment component for threaded discussions
+function ThreadedComment({ comment, postId, depth = 0, onReply, newReply, setNewReply, showReplies, setShowReplies, collapsedThreads, setCollapsedThreads, joined, me }) {
+  const isCollapsed = collapsedThreads.has(comment.id);
+  const hasReplies = comment.replies && comment.replies.length > 0;
+  const showReplyForm = showReplies.has(comment.id);
+  
+  const toggleCollapse = () => {
+    const newSet = new Set(collapsedThreads);
+    if (isCollapsed) {
+      newSet.delete(comment.id);
+    } else {
+      newSet.add(comment.id);
+    }
+    setCollapsedThreads(newSet);
+  };
+  
+  const toggleReplyForm = () => {
+    const newSet = new Set(showReplies);
+    if (showReplyForm) {
+      newSet.delete(comment.id);
+      setNewReply((m) => ({ ...m, [comment.id]: '' }));
+    } else {
+      newSet.add(comment.id);
+    }
+    setShowReplies(newSet);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-3 relative" style={{ marginLeft: `${depth * 16}px` }}>
+        {/* Thread connection line for nested comments */}
+        {depth > 0 && (
+          <>
+            <div 
+              className="absolute w-px bg-[var(--border)]" 
+              style={{ 
+                left: `${-8}px`, 
+                top: '0px', 
+                height: '24px'
+              }} 
+            />
+            <div 
+              className="absolute h-px bg-[var(--border)]" 
+              style={{ 
+                left: `${-8}px`, 
+                top: '12px', 
+                width: '8px'
+              }} 
+            />
+          </>
+        )}
+        
+        <div className="w-6 h-6 rounded-full bg-[var(--hover)] flex items-center justify-center flex-shrink-0">
+          <User className="w-3 h-3" />
+        </div>
+        <div className="flex-1 space-y-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-medium">Anonymous</span>
+            <span className="text-xs" style={{ color: 'var(--muted)' }}>
+              {new Date(comment.created_at).toLocaleDateString()} • {new Date(comment.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+            </span>
+            {hasReplies && (
+              <button
+                onClick={toggleCollapse}
+                className="text-xs hover:underline flex items-center gap-1"
+                style={{ color: 'var(--primary)' }}
+              >
+                <span>{isCollapsed ? '▶' : '▼'}</span>
+                {comment.replies.length} {comment.replies.length === 1 ? 'reply' : 'replies'}
+              </button>
+            )}
+          </div>
+          
+          <p className="text-sm leading-relaxed" style={{ color: 'var(--text)' }}>{comment.body}</p>
+          
+          <div className="flex items-center gap-3">
+            {joined && (
+              <button
+                onClick={toggleReplyForm}
+                className="text-xs hover:underline flex items-center gap-1"
+                style={{ color: 'var(--muted)' }}
+              >
+                <MessageSquare className="w-3 h-3" />
+                Reply
+              </button>
+            )}
+          </div>
+          
+          {/* Reply form */}
+          {showReplyForm && (
+            <div className="flex gap-2 pt-2">
+              <div className="w-5 h-5 rounded-full bg-[var(--hover)] flex items-center justify-center flex-shrink-0">
+                <User className="w-2.5 h-2.5" />
+              </div>
+              <input 
+                value={newReply[comment.id] || ''} 
+                onChange={(e) => setNewReply((m) => ({ ...m, [comment.id]: e.target.value }))} 
+                placeholder="Write a reply..." 
+                className="flex-1 rounded-lg bg-[var(--hover)] px-3 py-2 text-sm outline-none border border-transparent focus:border-[var(--primary)] transition-colors" 
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    onReply(postId, comment.id);
+                  }
+                }}
+                autoFocus
+              />
+              <Button 
+                size="sm" 
+                onClick={() => onReply(postId, comment.id)}
+                disabled={!(newReply[comment.id] || '').trim()}
+              >
+                Reply
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Nested replies with connecting lines */}
+      {hasReplies && !isCollapsed && (
+        <div className="space-y-3 relative" style={{ marginLeft: `${depth * 16}px` }}>
+          {/* Vertical line connecting replies */}
+          {comment.replies.length > 1 && (
+            <div 
+              className="absolute w-px bg-[var(--border)] opacity-50" 
+              style={{ 
+                left: '12px', 
+                top: '0px', 
+                height: '100%' 
+              }} 
+            />
+          )}
+          {comment.replies.map((reply) => (
+            <ThreadedComment
+              key={reply.id}
+              comment={reply}
+              postId={postId}
+              depth={depth + 1}
+              onReply={onReply}
+              newReply={newReply}
+              setNewReply={setNewReply}
+              showReplies={showReplies}
+              setShowReplies={setShowReplies}
+              collapsedThreads={collapsedThreads}
+              setCollapsedThreads={setCollapsedThreads}
+              joined={joined}
+              me={me}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function CommunityDetail() {
   const nav = useNavigate();
@@ -38,6 +214,9 @@ export default function CommunityDetail() {
   const [openComments, setOpenComments] = useState(new Set());
   const [commentsByPost, setCommentsByPost] = useState({});
   const [newComment, setNewComment] = useState({});
+  const [newReply, setNewReply] = useState({}); // For replies to comments
+  const [showReplies, setShowReplies] = useState(new Set()); // Which comments show reply form
+  const [collapsedThreads, setCollapsedThreads] = useState(new Set()); // Collapsed comment threads
   const [commentsLoading, setCommentsLoading] = useState({});
   const [uploadingNew, setUploadingNew] = useState(false);
   const fileInputRef = useState(null)[0] || null; // placeholder
@@ -145,13 +324,29 @@ export default function CommunityDetail() {
   async function postText() {
     if (!comm || !me) return;
     const title = postTitle.trim();
-    if (!title) return;
-    const hasText = !!composer.trim();
+    const text = composer.trim();
+    const link = postLink.trim();
+    
+    // Must have some content to post
+    if (!text && !selectedPhotoId && !link) return;
+    
     setPosting(true);
-    let payload = { community_id: comm.id, user_id: me.id, title };
-    if (postType === 'text') payload = { ...payload, kind: 'text', body: composer.trim() };
-    if (postType === 'photo') payload = { ...payload, kind: 'photo', photo_id: selectedPhotoId, body: hasText ? composer.trim() : null };
-    if (postType === 'link') payload = { ...payload, kind: 'link', link_url: postLink.trim(), body: hasText ? composer.trim() : null };
+    let payload = { community_id: comm.id, user_id: me.id };
+    
+    // Add title if provided
+    if (title) payload.title = title;
+    
+    // Determine post type and content
+    if (selectedPhotoId) {
+      payload = { ...payload, kind: 'photo', photo_id: selectedPhotoId };
+      if (text) payload.body = text;
+    } else if (link) {
+      payload = { ...payload, kind: 'link', link_url: link };
+      if (text) payload.body = text;
+    } else if (text) {
+      payload = { ...payload, kind: 'text', body: text };
+    }
+    
     const { data, error } = await supabase.from('community_posts').insert(payload).select('*').single();
     setPosting(false);
     if (!error && data) {
@@ -176,24 +371,67 @@ export default function CommunityDetail() {
     setCommentsLoading((m) => ({ ...m, [postId]: true }));
     const { data } = await supabase
       .from('community_post_comments')
-      .select('id, body, user_id, created_at')
+      .select('id, body, user_id, parent_id, created_at')
       .eq('post_id', postId)
       .order('created_at', { ascending: true });
+    
+    // Organize comments into threaded structure
+    const comments = data || [];
+    const commentMap = {};
+    const rootComments = [];
+    
+    // First pass: create comment objects with replies array
+    comments.forEach(comment => {
+      commentMap[comment.id] = { ...comment, replies: [] };
+    });
+    
+    // Second pass: organize into tree structure
+    comments.forEach(comment => {
+      if (comment.parent_id && commentMap[comment.parent_id]) {
+        commentMap[comment.parent_id].replies.push(commentMap[comment.id]);
+      } else {
+        rootComments.push(commentMap[comment.id]);
+      }
+    });
+    
     setCommentsLoading((m) => ({ ...m, [postId]: false }));
-    setCommentsByPost((map) => ({ ...map, [postId]: data || [] }));
+    setCommentsByPost((map) => ({ ...map, [postId]: rootComments }));
   }
 
-  async function addComment(postId) {
-    const text = (newComment[postId] || '').trim();
+  async function addComment(postId, parentId = null) {
+    const text = parentId ? (newReply[parentId] || '').trim() : (newComment[postId] || '').trim();
     if (!text || !me) return;
+    
+    const payload = { 
+      post_id: postId, 
+      user_id: me.id, 
+      body: text,
+      ...(parentId && { parent_id: parentId })
+    };
+    
     const { data, error } = await supabase
       .from('community_post_comments')
-      .insert({ post_id: postId, user_id: me.id, body: text })
-      .select('id, body, user_id, created_at')
+      .insert(payload)
+      .select('id, body, user_id, parent_id, created_at')
       .single();
-    if (!error) {
-      setNewComment((m) => ({ ...m, [postId]: '' }));
-      setCommentsByPost((map) => ({ ...map, [postId]: [ ...(map[postId] || []), data ] }));
+      
+    if (!error && data) {
+      // Clear the input
+      if (parentId) {
+        setNewReply((m) => ({ ...m, [parentId]: '' }));
+        setShowReplies((s) => {
+          const newSet = new Set(s);
+          newSet.delete(parentId);
+          return newSet;
+        });
+      } else {
+        setNewComment((m) => ({ ...m, [postId]: '' }));
+      }
+      
+      // Reload comments to get the updated threaded structure
+      loadComments(postId);
+      
+      // Update comment count
       setCommentCounts((cc) => ({ ...cc, [postId]: (cc[postId] || 0) + 1 }));
     }
   }
@@ -257,208 +495,505 @@ export default function CommunityDetail() {
   return (
     <div className="min-h-screen bg-[var(--app-bg)]">
       <SideNav active="communities" onNavigate={(p) => nav(p)} onLogout={() => {}} query={query} setQuery={setQuery} />
-      <main className="mx-auto max-w-6xl px-4 py-6 pb-16 md:pl-[260px]">
+      <main className="mx-auto max-w-7xl px-4 py-6 pb-16 md:pl-[260px]">
         {loading ? (
-          <div className="rounded-2xl border p-6" style={{ borderColor: 'var(--border)', background: 'var(--card-bg)' }}>
-            <p className="text-sm" style={{ color: 'var(--muted)' }}>Loading…</p>
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary)]"></div>
           </div>
         ) : !comm ? (
-          <div className="rounded-2xl border p-6" style={{ borderColor: 'var(--border)', background: 'var(--card-bg)' }}>
-            <p className="text-sm" style={{ color: 'var(--muted)' }}>Community not found.</p>
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold mb-2">Community not found</h3>
+              <p className="text-sm" style={{ color: 'var(--muted)' }}>This community doesn't exist or has been removed.</p>
+            </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            {/* Hero header */}
-            <section className="rounded-2xl overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
-              <div className="h-28 md:h-36" style={{ background: comm.cover_url ? `url(${comm.cover_url}) center/cover` : 'var(--hover)' }} />
-              <div className="flex items-start justify-between gap-3 p-4" style={{ background: 'var(--card-bg)' }}>
-                <div>
-                  <h1 className="text-2xl font-semibold tracking-tight">{comm.name}</h1>
-                  <p className="mt-1 text-xs" style={{ color: 'var(--muted)' }}>{membersCount} {membersCount === 1 ? 'member' : 'members'}</p>
-                  {comm.description && <p className="text-sm mt-2" style={{ color: 'var(--muted)' }}>{comm.description}</p>}
+          <div className="space-y-6">
+            {/* Enhanced Hero Section */}
+            <div className="relative">
+              <div className="rounded-2xl overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
+                <div 
+                  className="h-24 md:h-32" 
+                  style={{ 
+                    background: comm.cover_url 
+                      ? `linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), url(${comm.cover_url}) center/cover` 
+                      : 'var(--hover)'
+                  }}
+                />
+                <div className="p-6" style={{ background: 'var(--card-bg)' }}>
+                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                    <div className="flex-1">
+                      <h1 className="text-2xl font-semibold tracking-tight mb-2">{comm.name}</h1>
+                      <div className="flex items-center gap-4 text-sm mb-3" style={{ color: 'var(--muted)' }}>
+                        <span className="flex items-center gap-1">
+                          <Users className="w-4 h-4" />
+                          {membersCount} member{membersCount !== 1 ? 's' : ''}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MessageSquare className="w-4 h-4" />
+                          {visiblePosts.length} post{visiblePosts.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      {comm.description && (
+                        <p className="text-sm leading-relaxed max-w-2xl" style={{ color: 'var(--muted)' }}>
+                          {comm.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Button 
+                        variant={joined ? 'outline' : 'primary'} 
+                        onClick={toggleJoin} 
+                        loading={toggling}
+                        className="min-w-[100px]"
+                      >
+                        {joined ? (
+                          <>
+                            <Check className="w-4 h-4 mr-2" />
+                            Joined
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Join
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-                <Button variant={joined ? 'outline' : 'primary'} onClick={toggleJoin} loading={toggling}>{joined ? 'Joined' : 'Join'}</Button>
               </div>
-            </section>
-
-            {/* Tabs */}
-            <div className="flex items-center gap-3">
-              {['posts','members'].map((t) => (
-                <button key={t} onClick={() => setTab(t)} className={`px-3 py-2 rounded-lg text-sm ${tab===t ? 'font-semibold' : 'muted'} btn-focus`}>
-                  {t.charAt(0).toUpperCase()+t.slice(1)}
-                </button>
-              ))}
             </div>
 
-            {tab === 'posts' && (
-            <section>
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-medium" style={{ color: 'var(--text)' }}>Posts</h2>
-                <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--muted)' }}>
-                  <span>Sort</span>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="rounded-lg bg-[var(--hover)] px-2 py-1"
-                  >
-                    <option value="new">New</option>
-                    <option value="top">Top</option>
-                  </select>
-                </div>
-              </div>
-              {joined && (
-                <div className="mt-2 rounded-2xl border p-4" style={{ borderColor: 'var(--border)', background: 'var(--card-bg)' }}>
-                  <div>
-                    <input value={postTitle} onChange={(e) => setPostTitle(e.target.value)} placeholder="Title (optional)" className="w-full rounded-xl bg-[var(--hover)] px-3 py-2 text-sm outline-none" />
-                  </div>
-                  <textarea
-                    rows={3}
-                    value={composer}
-                    onChange={(e) => setComposer(e.target.value)}
-                    placeholder="Share an update with the community…"
-                    className="w-full rounded-xl bg-[var(--hover)] px-3 py-2 text-sm outline-none"
-                  />
-                  <div className="mt-2">
-                    <input value={postLink} onChange={(e) => setPostLink(e.target.value)} placeholder="Link (optional: https://example.com)" className="w-full rounded-xl bg-[var(--hover)] px-3 py-2 text-sm outline-none" />
-                  </div>
-                  {selectedPhotoId && (
-                    <div className="mt-2">
-                      <div className="rounded-xl overflow-hidden" style={{ aspectRatio: '3 / 4', background: 'var(--hover)' }}>
-                        {postPhotoUrls[selectedPhotoId] && (
-                          <img src={postPhotoUrls[selectedPhotoId]} alt="selected" className="w-full h-full object-cover" />
-                        )}
-                      </div>
-                      <div className="mt-2 flex justify-end">
-                        <Button size="sm" variant="outline" onClick={() => setSelectedPhotoId(null)}>Remove photo</Button>
-                      </div>
-                    </div>
-                  )}
-                  {!selectedPhotoId && (
-                    <div className="mt-2">
-                      <div className="flex items-center gap-3">
-                        <button type="button" className="text-xs underline" onClick={() => setPickerOpen((v) => !v)}>
-                          {pickerOpen ? 'Hide photos' : 'Pick existing photo'}
-                        </button>
-                        <div className="flex items-center gap-2">
-                          <input ref={setFileInputEl} type="file" accept="image/*" className="hidden" onChange={onUploadNewPhoto} />
-                          <Button size="sm" variant="outline" onClick={() => fileInputEl && fileInputEl.click()} loading={uploadingNew}>Upload new</Button>
-                        </div>
-                      </div>
-                      {pickerOpen && (
-                        <div className="mt-2 grid grid-cols-4 gap-2">
-                          {(myPhotos || []).map((ph) => (
-                            <button key={ph.id} type="button" className="rounded-lg overflow-hidden" onClick={() => { setSelectedPhotoId(ph.id); setPickerOpen(false); }}>
-                              <img src={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/photos/${ph.storage_path}`} alt="mine" className="w-full h-full object-cover" />
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <div className="mt-2 flex justify-end gap-2">
-                    <Button size="sm" onClick={postText} loading={posting} disabled={!composer.trim() && !selectedPhotoId && !postLink.trim()}>Post</Button>
-                  </div>
-                </div>
-              )}
-              {visiblePosts.length === 0 ? (
-                <p className="mt-2 text-sm" style={{ color: 'var(--muted)' }}>No posts yet.</p>
-              ) : (
-                <ul className="mt-3 space-y-3">
-                  {visiblePosts.map((p) => (
-                    <li key={p.id} className="rounded-2xl border p-4" style={{ borderColor: 'var(--border)', background: 'var(--card-bg)' }}>
-                      <div className="text-xs" style={{ color: 'var(--muted)' }}>@{authorNames[p.user_id] || p.user_id.slice(0,8)}</div>
-                      {p.kind === 'text' && (
-                        <p className="mt-1 text-sm" style={{ color: 'var(--text)' }}>{p.body}</p>
-                      )}
-                      {p.photo_id && (
-                        <div className="mt-2" style={{ aspectRatio: '3 / 4', background: 'var(--hover)' }}>
-                          {postPhotoUrls[p.photo_id] && (
-                            <img src={postPhotoUrls[p.photo_id]} alt="photo" className="w-full h-full object-cover rounded-lg" />
-                          )}
-                        </div>
-                      )}
-                      {p.title && (
-                        <h3 className="mt-2 text-sm font-semibold" style={{ color: 'var(--text)' }}>{p.title}</h3>
-                      )}
-                      {p.link_url && (
-                        <a href={p.link_url} target="_blank" rel="noreferrer" className="mt-1 text-xs underline" style={{ color: 'var(--muted)' }}>{p.link_url}</a>
-                      )}
-                      <div className="mt-3 flex items-center gap-4 text-xs" style={{ color: 'var(--muted)' }}>
-                        <button onClick={() => toggleLike(p.id)} className="underline">
-                          {likedByMe.has(p.id) ? 'Unlike' : 'Like'} ({likeCounts[p.id] || 0})
-                        </button>
-                        <button onClick={() => {
-                          const open = new Set(openComments);
-                          if (open.has(p.id)) { open.delete(p.id); setOpenComments(open); }
-                          else { open.add(p.id); setOpenComments(open); if (!commentsByPost[p.id]) loadComments(p.id); }
-                        }} className="underline">Comments {commentCounts[p.id] || 0}</button>
-                      </div>
-                      {openComments.has(p.id) && (
-                        <div className="mt-2 rounded-xl border p-3" style={{ borderColor: 'var(--border)', background: 'var(--card-bg)' }}>
-                          {commentsLoading[p.id] ? (
-                            <p className="text-xs" style={{ color: 'var(--muted)' }}>Loading comments…</p>
-                          ) : (
-                            <ul className="space-y-2">
-                              {(commentsByPost[p.id] || []).map((c) => (
-                                <li key={c.id} className="rounded border p-2" style={{ borderColor: 'var(--border)' }}>
-                                  <div className="text-xs" style={{ color: 'var(--muted)' }}>{new Date(c.created_at).toLocaleString()}</div>
-                                  <div className="text-sm" style={{ color: 'var(--text)' }}>{c.body}</div>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                          {joined && (
-                            <div className="mt-2 flex items-center gap-2">
-                              <input value={newComment[p.id] || ''} onChange={(e) => setNewComment((m) => ({ ...m, [p.id]: e.target.value }))} placeholder="Add a comment" className="flex-1 rounded-xl bg-[var(--hover)] px-3 py-2 text-sm outline-none" />
-                              <Button size="sm" onClick={() => addComment(p.id)} disabled={!newComment[p.id] || !newComment[p.id].trim()}>Post</Button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </li>
+            {/* Main Content with Sidebar Layout */}
+            <div className="grid lg:grid-cols-4 gap-6">
+              {/* Main Content */}
+              <div className="lg:col-span-3 space-y-6">
+                {/* Navigation Tabs */}
+                <div className="flex items-center gap-1 p-1 rounded-2xl" style={{ background: 'var(--hover)' }}>
+                  {[
+                    { key: 'posts', label: 'Posts', icon: FileText },
+                    { key: 'members', label: 'Members', icon: Users }
+                  ].map(({ key, label, icon: Icon }) => (
+                    <button
+                      key={key}
+                      onClick={() => setTab(key)}
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                        tab === key
+                          ? 'bg-[var(--card-bg)] shadow-sm border border-[var(--border)]'
+                          : 'hover:bg-[var(--card-bg)] hover:bg-opacity-50'
+                      }`}
+                      style={{ color: tab === key ? 'var(--text)' : 'var(--muted)' }}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {label}
+                    </button>
                   ))}
-                </ul>
-              )}
-            </section>
-            )}
+                </div>
 
-            {tab === 'members' && (
-              <section>
-                {members.length === 0 ? (
-                  <p className="mt-2 text-sm" style={{ color: 'var(--muted)' }}>No members yet.</p>
-                ) : (
-                  <ul className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-3">
-                    {members.map((m) => (
-                      <li key={m.id} className="rounded-xl border px-3 py-2 text-sm" style={{ borderColor: 'var(--border)', background: 'var(--card-bg)' }}>
-                        @{m.username || m.full_name || m.id.slice(0,8)}
-                      </li>
-                    ))}
-                  </ul>
+                {/* Posts Tab */}
+                {tab === 'posts' && (
+                  <div className="space-y-6">
+                    {/* Post Composer - Compact Design */}
+                    {joined && (
+                      <div className="rounded-2xl border p-4" style={{ borderColor: 'var(--border)', background: 'var(--card-bg)' }}>
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-full bg-[var(--hover)] flex items-center justify-center flex-shrink-0">
+                            <User className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 space-y-3">
+                            <textarea
+                              rows={2}
+                              value={composer}
+                              onChange={(e) => setComposer(e.target.value)}
+                              placeholder="Share something with the community..."
+                              className="w-full rounded-lg bg-[var(--hover)] px-3 py-2 text-sm outline-none border border-transparent focus:border-[var(--primary)] transition-colors resize-none"
+                            />
+                            
+                            {/* Expanded options when focused or has content */}
+                            {(composer.trim() || postTitle.trim() || postLink.trim() || selectedPhotoId) && (
+                              <div className="space-y-2">
+                                <input 
+                                  value={postTitle} 
+                                  onChange={(e) => setPostTitle(e.target.value)} 
+                                  placeholder="Add a title (optional)" 
+                                  className="w-full rounded-lg bg-[var(--hover)] px-3 py-2 text-sm outline-none border border-transparent focus:border-[var(--primary)] transition-colors" 
+                                />
+                                <input 
+                                  value={postLink} 
+                                  onChange={(e) => setPostLink(e.target.value)} 
+                                  placeholder="Add a link (optional)" 
+                                  className="w-full rounded-lg bg-[var(--hover)] px-3 py-2 text-sm outline-none border border-transparent focus:border-[var(--primary)] transition-colors" 
+                                />
+                              </div>
+                            )}
+
+                            {selectedPhotoId && (
+                              <div className="relative w-24 h-24">
+                                <div className="rounded-lg overflow-hidden w-full h-full" style={{ background: 'var(--hover)' }}>
+                                  {postPhotoUrls[selectedPhotoId] && (
+                                    <img src={postPhotoUrls[selectedPhotoId]} alt="selected" className="w-full h-full object-cover" />
+                                  )}
+                                </div>
+                                <button 
+                                  onClick={() => setSelectedPhotoId(null)}
+                                  className="absolute -top-1 -right-1 p-1 rounded-full bg-[var(--card-bg)] border border-[var(--border)] hover:bg-[var(--hover)] transition-all"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            )}
+
+                            {pickerOpen && (
+                              <div className="grid grid-cols-6 gap-2 p-2 rounded-lg bg-[var(--hover)]">
+                                {(myPhotos || []).slice(0, 12).map((ph) => (
+                                  <button 
+                                    key={ph.id} 
+                                    type="button" 
+                                    className="aspect-square rounded-md overflow-hidden hover:ring-2 hover:ring-[var(--primary)] transition-all" 
+                                    onClick={() => { setSelectedPhotoId(ph.id); setPickerOpen(false); }}
+                                  >
+                                    <img 
+                                      src={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/photos/${ph.storage_path}`} 
+                                      alt="option" 
+                                      className="w-full h-full object-cover" 
+                                    />
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1">
+                                <button 
+                                  type="button" 
+                                  onClick={() => setPickerOpen((v) => !v)}
+                                  className="p-1.5 rounded-lg hover:bg-[var(--hover)] transition-colors"
+                                  title="Add photo"
+                                >
+                                  <Image className="w-4 h-4" />
+                                </button>
+                                <input ref={setFileInputEl} type="file" accept="image/*" className="hidden" onChange={onUploadNewPhoto} />
+                                <button
+                                  type="button"
+                                  onClick={() => fileInputEl && fileInputEl.click()}
+                                  disabled={uploadingNew}
+                                  className="p-1.5 rounded-lg hover:bg-[var(--hover)] transition-colors disabled:opacity-50"
+                                  title="Upload photo"
+                                >
+                                  {uploadingNew ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[var(--primary)]"></div>
+                                  ) : (
+                                    <Upload className="w-4 h-4" />
+                                  )}
+                                </button>
+                              </div>
+                              <Button 
+                                onClick={postText} 
+                                loading={posting} 
+                                disabled={!composer.trim() && !selectedPhotoId && !postLink.trim()}
+                                variant="secondary"
+                                className="text-sm px-4 py-1.5"
+                              >
+                                Post
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sort Controls */}
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-lg font-semibold">Community Posts</h2>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm" style={{ color: 'var(--muted)' }}>Sort by:</span>
+                        <select
+                          value={sortBy}
+                          onChange={(e) => setSortBy(e.target.value)}
+                          className="rounded-lg bg-[var(--hover)] border border-[var(--border)] px-3 py-1 text-sm outline-none focus:border-[var(--primary)] transition-colors"
+                        >
+                          <option value="new">Latest</option>
+                          <option value="top">Top Liked</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Posts Feed */}
+                    {visiblePosts.length === 0 ? (
+                      <div className="text-center py-12">
+                        <MessageSquare className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                        <h3 className="text-lg font-semibold mb-2">No posts yet</h3>
+                        <p className="text-sm" style={{ color: 'var(--muted)' }}>
+                          {joined ? "Be the first to share something with the community!" : "Join the community to see and share posts."}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {visiblePosts.map((p) => (
+                          <article key={p.id} className="rounded-2xl border p-6 space-y-4" style={{ borderColor: 'var(--border)', background: 'var(--card-bg)' }}>
+                            {/* Post Header */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-[var(--hover)] flex items-center justify-center">
+                                  <User className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <p className="font-medium text-sm">@{authorNames[p.user_id] || p.user_id.slice(0,8)}</p>
+                                  <p className="text-xs" style={{ color: 'var(--muted)' }}>
+                                    {new Date(p.created_at).toLocaleDateString()} at {new Date(p.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Post Content */}
+                            <div className="space-y-3">
+                              {p.title && (
+                                <h3 className="text-lg font-semibold" style={{ color: 'var(--text)' }}>{p.title}</h3>
+                              )}
+                              
+                              {p.kind === 'text' && p.body && (
+                                <p className="text-sm leading-relaxed" style={{ color: 'var(--text)' }}>{p.body}</p>
+                              )}
+                              
+                              {p.photo_id && postPhotoUrls[p.photo_id] && (
+                                <div className="rounded-xl overflow-hidden max-w-md">
+                                  <img src={postPhotoUrls[p.photo_id]} alt="post" className="w-full h-auto object-cover" />
+                                </div>
+                              )}
+                              
+                              {p.link_url && (
+                                <a 
+                                  href={p.link_url} 
+                                  target="_blank" 
+                                  rel="noreferrer" 
+                                  className="inline-flex items-center gap-2 text-sm hover:underline p-3 rounded-lg bg-[var(--hover)] transition-colors"
+                                  style={{ color: 'var(--primary)' }}
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                  {p.link_url}
+                                </a>
+                              )}
+                            </div>
+
+                            {/* Post Actions */}
+                            <div className="flex items-center gap-6 pt-2">
+                              <button 
+                                onClick={() => toggleLike(p.id)} 
+                                className="flex items-center gap-2 text-sm transition-colors hover:opacity-70"
+                                style={{ color: 'var(--muted)' }}
+                              >
+                                <Heart className={`w-4 h-4 ${likedByMe.has(p.id) ? 'fill-current' : ''}`} />
+                                {likeCounts[p.id] || 0}
+                              </button>
+                              
+                              <button 
+                                onClick={() => {
+                                  const open = new Set(openComments);
+                                  if (open.has(p.id)) { 
+                                    open.delete(p.id); 
+                                    setOpenComments(open); 
+                                  } else { 
+                                    open.add(p.id); 
+                                    setOpenComments(open); 
+                                    if (!commentsByPost[p.id]) loadComments(p.id); 
+                                  }
+                                }}
+                                className="flex items-center gap-2 text-sm transition-colors hover:text-[var(--primary)]"
+                                style={{ color: 'var(--muted)' }}
+                              >
+                                <MessageSquare className="w-4 h-4" />
+                                {commentCounts[p.id] || 0} comments
+                              </button>
+                            </div>
+
+                            {/* Comments Section - Threaded */}
+                            {openComments.has(p.id) && (
+                              <div className="mt-4 space-y-4 pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
+                                {commentsLoading[p.id] ? (
+                                  <div className="flex items-center justify-center py-4">
+                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[var(--primary)]"></div>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-4">
+                                    {(commentsByPost[p.id] || []).map((c) => (
+                                      <ThreadedComment
+                                        key={c.id}
+                                        comment={c}
+                                        postId={p.id}
+                                        depth={0}
+                                        onReply={addComment}
+                                        newReply={newReply}
+                                        setNewReply={setNewReply}
+                                        showReplies={showReplies}
+                                        setShowReplies={setShowReplies}
+                                        collapsedThreads={collapsedThreads}
+                                        setCollapsedThreads={setCollapsedThreads}
+                                        joined={joined}
+                                        me={me}
+                                      />
+                                    ))}
+                                  </div>
+                                )}
+                                
+                                {/* Main comment input */}
+                                {joined && (
+                                  <div className="flex gap-3 pt-2 border-t" style={{ borderColor: 'var(--border)' }}>
+                                    <div className="w-6 h-6 rounded-full bg-[var(--hover)] flex items-center justify-center flex-shrink-0">
+                                      <User className="w-3 h-3" />
+                                    </div>
+                                    <div className="flex-1 flex gap-2">
+                                      <input 
+                                        value={newComment[p.id] || ''} 
+                                        onChange={(e) => setNewComment((m) => ({ ...m, [p.id]: e.target.value }))} 
+                                        placeholder="Write a comment..." 
+                                        className="flex-1 rounded-lg bg-[var(--hover)] px-3 py-2 text-sm outline-none border border-transparent focus:border-[var(--primary)] transition-colors"
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            addComment(p.id);
+                                          }
+                                        }}
+                                      />
+                                      <Button 
+                                        size="sm" 
+                                        onClick={() => addComment(p.id)} 
+                                        disabled={!newComment[p.id] || !newComment[p.id].trim()}
+                                      >
+                                        <Send className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
-              </section>
-            )}
-            {/* Simple sidebar blocks for about/mods/rules */}
-            <section className="grid md:grid-cols-3 gap-4">
-              <div className="md:col-span-2" />
-              <aside className="space-y-3">
-                <div className="rounded-2xl border p-4" style={{ borderColor: 'var(--border)', background: 'var(--card-bg)' }}>
-                  <h3 className="text-sm font-medium">About</h3>
-                  <p className="mt-1 text-sm" style={{ color: 'var(--muted)' }}>{comm.description || 'No description yet.'}</p>
+
+                {/* Members Tab */}
+                {tab === 'members' && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-lg font-semibold">Community Members</h2>
+                      <span className="text-sm px-3 py-1 rounded-full bg-[var(--hover)]" style={{ color: 'var(--muted)' }}>
+                        {members.length} member{members.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    
+                    {members.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Users className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                        <h3 className="text-lg font-semibold mb-2">No members yet</h3>
+                        <p className="text-sm" style={{ color: 'var(--muted)' }}>Be the first to join this community!</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {members.map((m) => (
+                          <div key={m.id} className="flex items-center gap-3 p-4 rounded-xl border hover:shadow-md transition-all duration-200" style={{ borderColor: 'var(--border)', background: 'var(--card-bg)' }}>
+                            <div className="w-10 h-10 rounded-full bg-[var(--hover)] flex items-center justify-center">
+                              <User className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">@{m.username || m.full_name || m.id.slice(0,8)}</p>
+                              <p className="text-xs" style={{ color: 'var(--muted)' }}>Member</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Sidebar */}
+              <aside className="lg:col-span-1 space-y-6">
+                {/* About */}
+                <div className="rounded-2xl border p-6" style={{ borderColor: 'var(--border)', background: 'var(--card-bg)' }}>
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <Info className="w-5 h-5" />
+                    About
+                  </h3>
+                  <p className="text-sm leading-relaxed" style={{ color: 'var(--muted)' }}>
+                    {comm.description || 'No description available for this community.'}
+                  </p>
                 </div>
-                <div className="rounded-2xl border p-4" style={{ borderColor: 'var(--border)', background: 'var(--card-bg)' }}>
-                  <h3 className="text-sm font-medium">Moderators</h3>
-                  <p className="mt-1 text-sm" style={{ color: 'var(--muted)' }}>Owner: @{ownerName}</p>
+
+                {/* Stats */}
+                <div className="rounded-2xl border p-6" style={{ borderColor: 'var(--border)', background: 'var(--card-bg)' }}>
+                  <h3 className="text-lg font-semibold mb-4">Community Stats</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm flex items-center gap-2" style={{ color: 'var(--muted)' }}>
+                        <Users className="w-4 h-4" />
+                        Members
+                      </span>
+                      <span className="font-semibold">{membersCount}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm flex items-center gap-2" style={{ color: 'var(--muted)' }}>
+                        <MessageSquare className="w-4 h-4" />
+                        Posts
+                      </span>
+                      <span className="font-semibold">{visiblePosts.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm flex items-center gap-2" style={{ color: 'var(--muted)' }}>
+                        <Calendar className="w-4 h-4" />
+                        Created
+                      </span>
+                      <span className="font-semibold text-sm">
+                        {new Date(comm.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="rounded-2xl border p-4" style={{ borderColor: 'var(--border)', background: 'var(--card-bg)' }}>
-                  <h3 className="text-sm font-medium">Rules</h3>
-                  <ul className="mt-2 list-disc pl-5 text-sm" style={{ color: 'var(--muted)' }}>
-                    <li>Be respectful.</li>
-                    <li>No spam or self-promotion.</li>
-                    <li>Stay on topic.</li>
-                  </ul>
+
+                {/* Moderators */}
+                <div className="rounded-2xl border p-6" style={{ borderColor: 'var(--border)', background: 'var(--card-bg)' }}>
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <Shield className="w-5 h-5" />
+                    Moderators
+                  </h3>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[var(--hover)] flex items-center justify-center">
+                      <Crown className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">@{ownerName}</p>
+                      <p className="text-xs" style={{ color: 'var(--muted)' }}>Owner</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Community Rules */}
+                <div className="rounded-2xl border p-6" style={{ borderColor: 'var(--border)', background: 'var(--card-bg)' }}>
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <BookOpen className="w-5 h-5" />
+                    Community Rules
+                  </h3>
+                  <div className="space-y-3">
+                    {[
+                      'Be respectful and kind to all members',
+                      'No spam or excessive self-promotion',
+                      'Keep discussions relevant to the community',
+                      'Report inappropriate content to moderators'
+                    ].map((rule, index) => (
+                      <div key={index} className="flex items-start gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--primary)] text-white text-xs flex items-center justify-center font-medium">
+                          {index + 1}
+                        </span>
+                        <p className="text-sm" style={{ color: 'var(--muted)' }}>{rule}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </aside>
-            </section>
+            </div>
           </div>
         )}
       </main>

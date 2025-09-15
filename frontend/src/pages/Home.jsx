@@ -45,7 +45,15 @@ export default function Home() {
           .select("full_name, username, location, level, genres")
           .eq("id", u.id)
           .maybeSingle();
-        if (mounted) setProfile(prow || null);
+        if (mounted) {
+          // Normalize genres for downstream consumers
+          const normalize = (val) => Array.isArray(val) ? val : (typeof val === 'string' ? (() => {
+            try { const j = JSON.parse(val); return Array.isArray(j) ? j : []; } catch {}
+            if (val.startsWith('{') && val.endsWith('}')) return val.slice(1,-1).split(',').map(s=>s.replace(/^"|"$/g,'').trim()).filter(Boolean);
+            return [];
+          })() : []);
+          setProfile(prow ? { ...prow, genres: normalize(prow.genres) } : null);
+        }
       }
     }
     hydrate();
@@ -58,7 +66,14 @@ export default function Home() {
           .select("full_name, username, location, level, genres")
           .eq("id", session.user.id)
           .maybeSingle()
-          .then(({ data }) => setProfile(data || null));
+          .then(({ data }) => {
+            const normalize = (val) => Array.isArray(val) ? val : (typeof val === 'string' ? (() => {
+              try { const j = JSON.parse(val); return Array.isArray(j) ? j : []; } catch {}
+              if (val.startsWith('{') && val.endsWith('}')) return val.slice(1,-1).split(',').map(s=>s.replace(/^"|"$/g,'').trim()).filter(Boolean);
+              return [];
+            })() : []);
+            setProfile(data ? { ...data, genres: normalize(data.genres) } : null);
+          });
       }
     });
     return () => sub.subscription?.unsubscribe?.();
@@ -133,6 +148,14 @@ export default function Home() {
       setLoadingMore(true);
     }
 
+    // First, get all photo IDs that are used in community posts
+    const { data: communityPhotoIds } = await supabase
+      .from("community_posts")
+      .select("photo_id")
+      .not("photo_id", "is", null);
+    
+    const excludeIds = new Set((communityPhotoIds || []).map(row => row.photo_id).filter(Boolean));
+
     let q = supabase
       .from("photos")
       .select(`
@@ -149,7 +172,7 @@ export default function Home() {
         )
       `)
       .order("created_at", { ascending: false })
-      .limit(PAGE_SIZE);
+      .limit(PAGE_SIZE * 2); // Get more to account for filtering
 
     if (lastCursorRef.current) q = q.lt("created_at", lastCursorRef.current);
 
@@ -161,22 +184,25 @@ export default function Home() {
       return;
     }
 
-    const rows = (data || []).map((p) => {
-      const w = p.exif?.width ?? null;
-      const h = p.exif?.height ?? null;
-      const aspect = (w && h) ? `${w} / ${h}` : "1 / 1";
-      return {
-        id: p.id,
-        owner_id: p.user_id,
-        url: publicPhotoUrl(p.storage_path),
-        caption: p.caption || "",
-        created_at: p.created_at,
-        user: p.author?.username || p.author?.full_name || "user",
-        place: p.author?.location || "",
-        aspect,
-        exif: p.exif || null,
-      };
-    });
+    const rows = (data || [])
+      .filter(p => !excludeIds.has(p.id)) // Filter out community photos
+      .map((p) => {
+        const w = p.exif?.width ?? null;
+        const h = p.exif?.height ?? null;
+        const aspect = (w && h) ? `${w} / ${h}` : "1 / 1";
+        return {
+          id: p.id,
+          owner_id: p.user_id,
+          url: publicPhotoUrl(p.storage_path),
+          caption: p.caption || "",
+          created_at: p.created_at,
+          user: p.author?.username || p.author?.full_name || "user",
+          place: p.author?.location || "",
+          aspect,
+          exif: p.exif || null,
+        };
+      })
+      .slice(0, PAGE_SIZE); // Limit to original page size
 
     const merged = await hydrateEngagement(rows, user);
 

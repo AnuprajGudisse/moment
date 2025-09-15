@@ -1,9 +1,10 @@
-import { HomeIcon, CompassIcon, UserIcon, PlusIcon } from "./icons";
+import { HomeIcon, CompassIcon, UserIcon, PlusIcon, UsersIcon } from "./icons";
 
 export default function BottomNav({ active = "home", onNavigate = () => {} }) {
   const items = [
     { key: "home", label: "Home", icon: HomeIcon, path: "/home" },
     { key: "discover", label: "Discover", icon: CompassIcon, path: "/discover" },
+    { key: "communities", label: "Communities", icon: UsersIcon, path: "/communities" },
     { key: "upload", label: "New Post", icon: PlusIcon, action: () => {
       const isSmall = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
       if (isSmall) onNavigate('/new');
@@ -14,7 +15,7 @@ export default function BottomNav({ active = "home", onNavigate = () => {} }) {
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 md:hidden" style={{ background: "var(--card-bg)", borderTop: `1px solid var(--border)` }}>
-      <ul className="grid grid-cols-4">
+      <ul className="grid grid-cols-5">
         {items.map(({ key, label, icon: Icon, path, action }) => (
           <li key={key}>
             <button

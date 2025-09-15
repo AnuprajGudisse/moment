@@ -33,7 +33,12 @@ export default function Signup() {
   );
 
   function toggleGenre(g) {
-    setGenres((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
+    console.log(`toggleGenre called for: ${g}, current genres:`, genres);
+    setGenres((prev) => {
+      const newGenres = prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g];
+      console.log(`New genres state:`, newGenres);
+      return newGenres;
+    });
   }
 
   async function submit(e) {
@@ -53,7 +58,7 @@ export default function Signup() {
       email,
       password,
       options: {
-        data: { full_name: fullName },
+        data: { full_name: fullName, username, level, genres, location },
         emailRedirectTo: `${window.location.origin}/login`,
       },
     });

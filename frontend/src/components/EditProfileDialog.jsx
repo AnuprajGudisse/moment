@@ -30,8 +30,14 @@ export default function EditProfileDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-      <div className="w-full max-w-3xl rounded-2xl" style={{ background: "var(--card-bg)" }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop below modal content to avoid intercepting clicks on content */}
+      <div
+        className="absolute inset-0 z-40 bg-black/40"
+        onClick={onClose}
+        aria-hidden
+      />
+      <div className="relative z-50 w-full max-w-3xl rounded-2xl" style={{ background: "var(--card-bg)" }}>
         <div className="px-5 py-4 border-b" style={{ borderColor: "var(--border)" }}>
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Edit Profile</h3>

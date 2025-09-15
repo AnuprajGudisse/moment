@@ -1,6 +1,7 @@
 import Logo from "./Logo";
 import Button from "./Button";
 import ThemeToggle from "./ThemeToggle";
+import { HomeIcon, CompassIcon, UserIcon, CalendarIcon, ImageIcon, UsersIcon, TrendingUpIcon, Send } from "./icons";
 
 export default function SideNav({
   active = "home",
@@ -11,14 +12,14 @@ export default function SideNav({
   setQuery = () => {},
 }) {
   const items = [
-    { key: "home", label: "Home", path: "/home" },
-    { key: "discover", label: "Discover", path: "/discover" },
-    { key: "profile", label: "Profile", path: "/profile" },
-    { key: "events", label: "Events", path: "/events" },
-    { key: "gags", label: "Gags", path: "/gags" },
-    { key: "communities", label: "Communities", path: "/communities" },
-    { key: "trending", label: "Trending", path: "/trending" },
-    { key: "messages", label: "Messages", path: "/messages" },
+    { key: "home", label: "Home", path: "/home", icon: HomeIcon },
+    { key: "discover", label: "Discover", path: "/discover", icon: CompassIcon },
+    { key: "communities", label: "Communities", path: "/communities", icon: UsersIcon },
+    { key: "profile", label: "Profile", path: "/profile", icon: UserIcon },
+    { key: "events", label: "Events", path: "/events", icon: CalendarIcon },
+    { key: "gags", label: "Gags", path: "/gags", icon: ImageIcon },
+    { key: "trending", label: "Trending", path: "/trending", icon: TrendingUpIcon },
+    { key: "messages", label: "Messages", path: "/messages", icon: Send },
   ];
 
   return (
@@ -47,9 +48,10 @@ export default function SideNav({
             {items.map((it) => (
               <li key={it.key}>
                 <button
-                  className={`w-full text-left rounded-xl px-3 py-2 hover-surface btn-focus ${active === it.key ? "" : "muted"}`}
+                  className={`w-full text-left rounded-xl px-3 py-2 hover-surface btn-focus flex items-center gap-3 ${active === it.key ? "" : "muted"}`}
                   onClick={() => onNavigate(it.path)}
                 >
+                  <it.icon size={18} />
                   {it.label}
                 </button>
               </li>

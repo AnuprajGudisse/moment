@@ -30,10 +30,22 @@ do $$ begin
   ) then
     create policy "Users can insert own profile" on public.profiles for insert with check (auth.uid() = id);
   end if;
+  -- Allow service role (auth) to insert profiles via triggers
+  if not exists (
+    select 1 from pg_policies where schemaname = 'public' and tablename = 'profiles' and policyname = 'Service role can insert profiles'
+  ) then
+    create policy "Service role can insert profiles" on public.profiles for insert with check (auth.role() = 'service_role');
+  end if;
   if not exists (
     select 1 from pg_policies where schemaname = 'public' and tablename = 'profiles' and policyname = 'Users can update own profile'
   ) then
     create policy "Users can update own profile" on public.profiles for update using (auth.uid() = id) with check (auth.uid() = id);
+  end if;
+  -- Allow service role (auth) to update profiles via triggers
+  if not exists (
+    select 1 from pg_policies where schemaname = 'public' and tablename = 'profiles' and policyname = 'Service role can update profiles'
+  ) then
+    create policy "Service role can update profiles" on public.profiles for update using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
   end if;
 end $$;
 
@@ -44,11 +56,21 @@ language plpgsql
 security definer set search_path = public
 as $$
 begin
-  insert into public.profiles (id, full_name, email)
+  insert into public.profiles (id, full_name, email, username, location, level, genres)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'full_name', ''),
-    new.email
+    new.email,
+    new.raw_user_meta_data->>'username',
+    coalesce(new.raw_user_meta_data->>'location', null),
+    coalesce(new.raw_user_meta_data->>'level', null),
+    coalesce(
+      (
+        select array_agg(value::text)
+        from jsonb_array_elements_text(coalesce(new.raw_user_meta_data->'genres', '[]'::jsonb))
+      ),
+      '{}'::text[]
+    )
   )
   on conflict (id) do nothing;
   return new;
@@ -68,7 +90,17 @@ as $$
 begin
   update public.profiles p
     set full_name = coalesce(new.raw_user_meta_data->>'full_name', p.full_name),
-        email = new.email
+        email = new.email,
+        username = coalesce(new.raw_user_meta_data->>'username', p.username),
+        location = coalesce(new.raw_user_meta_data->>'location', p.location),
+        level = coalesce(new.raw_user_meta_data->>'level', p.level),
+        genres = coalesce(
+          (
+            select array_agg(value::text)
+            from jsonb_array_elements_text(coalesce(new.raw_user_meta_data->'genres', '[]'::jsonb))
+          ),
+          p.genres
+        )
   where p.id = new.id;
   return new;
 end; $$;

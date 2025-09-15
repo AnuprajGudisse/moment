@@ -49,12 +49,21 @@ export default function Discover() {
       setLoadingMore(true);
     }
 
+    // First, get all photo IDs that are used in community posts
+    const { data: communityPhotoIds } = await supabase
+      .from("community_posts")
+      .select("photo_id")
+      .not("photo_id", "is", null);
+    
+    const excludeIds = new Set((communityPhotoIds || []).map(row => row.photo_id).filter(Boolean));
+
     let q = supabase
       .from("photos")
       .select(`id, storage_path, caption, exif, created_at,
                author:profiles!photos_user_id_fkey (username, full_name)`)
       .order("created_at", { ascending: false })
-      .limit(PAGE_SIZE);
+      .limit(PAGE_SIZE * 2); // Get more to account for filtering
+    
     if (lastCursorRef.current) q = q.lt("created_at", lastCursorRef.current);
 
     const { data, error } = await q;
@@ -64,20 +73,23 @@ export default function Discover() {
       return;
     }
 
-    const rows = (data || []).map((p) => {
-      const w = p.exif?.width ?? null;
-      const h = p.exif?.height ?? null;
-      return {
-        id: p.id,
-        url: publicPhotoUrl(p.storage_path),
-        caption: p.caption || "",
-        user: p.author?.username || p.author?.full_name || "user",
-        aspect: (w && h) ? `${w} / ${h}` : "1 / 1",
-        created_at: p.created_at,
-        tags: Array.isArray(p.exif?.tags) ? p.exif.tags : [],
-        exif: p.exif || null,
-      };
-    });
+    const rows = (data || [])
+      .filter(p => !excludeIds.has(p.id)) // Filter out community photos
+      .map((p) => {
+        const w = p.exif?.width ?? null;
+        const h = p.exif?.height ?? null;
+        return {
+          id: p.id,
+          url: publicPhotoUrl(p.storage_path),
+          caption: p.caption || "",
+          user: p.author?.username || p.author?.full_name || "user",
+          aspect: (w && h) ? `${w} / ${h}` : "1 / 1",
+          created_at: p.created_at,
+          tags: Array.isArray(p.exif?.tags) ? p.exif.tags : [],
+          exif: p.exif || null,
+        };
+      })
+      .slice(0, PAGE_SIZE); // Limit to original page size
 
     const merged = filterText
       ? rows.filter((r) => `${r.caption} ${r.user} ${r.tags.join(" ")}`.toLowerCase().includes(filterText))
