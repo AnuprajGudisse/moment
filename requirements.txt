@@ -34,3 +34,9 @@ uvicorn==0.35.0
 uvloop==0.21.0
 watchfiles==1.1.0
 websockets==15.0.1
+numpy==1.26.4
+opencv-python==4.9.0.80
+scikit-learn==1.4.1.post1
+transformers==4.38.2
+torch==2.8.0
+torchvision==0.19.0
