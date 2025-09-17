@@ -10,6 +10,7 @@ import UpcomingMenu from "./components/UpcomingMenu";
 import Profile from "./pages/Profile";
 import NewPost from "./pages/NewPost";
 import Events from "./pages/Events";
+import EventDetail from "./pages/EventDetail";
 import Gags from "./pages/Gags";
 import GagNew from "./pages/GagNew";
 import GagDetail from "./pages/GagDetail";
@@ -61,6 +62,7 @@ const router = createBrowserRouter([
   { path: "/profile", element: <AuthGate><Profile /></AuthGate> },
   { path: "/new", element: <AuthGate><NewPost /></AuthGate> },
   { path: "/events", element: <AuthGate><Events /></AuthGate> },
+  { path: "/events/:id", element: <AuthGate><EventDetail /></AuthGate> },
   { path: "/gags", element: <AuthGate><Gags /></AuthGate> },
   { path: "/gags/new", element: <AuthGate><GagNew /></AuthGate> },
   { path: "/gags/:id", element: <AuthGate><GagDetail /></AuthGate> },

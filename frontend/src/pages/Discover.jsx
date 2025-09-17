@@ -59,8 +59,9 @@ export default function Discover() {
 
     let q = supabase
       .from("photos")
-      .select(`id, storage_path, caption, exif, created_at,
+      .select(`id, storage_path, caption, exif, created_at, context,
                author:profiles!photos_user_id_fkey (username, full_name)`)
+      .eq("context", "post") // Only show regular posts, not event or community photos
       .order("created_at", { ascending: false })
       .limit(PAGE_SIZE * 2); // Get more to account for filtering
     
@@ -74,7 +75,7 @@ export default function Discover() {
     }
 
     const rows = (data || [])
-      .filter(p => !excludeIds.has(p.id)) // Filter out community photos
+      .filter(p => !excludeIds.has(p.id)) // Filter out community photos (legacy check)
       .map((p) => {
         const w = p.exif?.width ?? null;
         const h = p.exif?.height ?? null;

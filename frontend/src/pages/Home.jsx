@@ -165,12 +165,14 @@ export default function Home() {
         caption,
         exif,
         created_at,
+        context,
         author:profiles!photos_user_id_fkey (
           username,
           full_name,
           location
         )
       `)
+      .eq("context", "post") // Only show regular posts, not event or community photos
       .order("created_at", { ascending: false })
       .limit(PAGE_SIZE * 2); // Get more to account for filtering
 

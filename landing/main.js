@@ -17,16 +17,57 @@ const h = (tag, props = {}, ...children) => {
 };
 const section = (id, title, ...content) => h('section', { id, class: 'wrap section' }, h('h2', { text: title }), ...content);
 
-// Header
-const Header = () => h('header', { class: 'wrap header' },
-  h('div', { class: 'brand' }, h('div', { class: 'aperture', attrs: { 'aria-hidden': 'true' } }), h('span', { class: 'wordmark', text: 'moment' })),
-  h('nav', { class: 'topnav' },
+// Header with mobile navigation
+const Header = () => {
+  const nav = h('nav', { class: 'topnav' },
     h('a', { href: '#features', text: 'Features' }),
     h('a', { href: '#gallery', text: 'Gallery' }),
     h('a', { href: '#future', text: 'Roadmap' }),
     h('a', { href: '#waitlist', text: 'Waitlist' }),
-  ),
-);
+  );
+  
+  const mobileMenuBtn = h('button', { 
+    class: 'mobile-menu-btn', 
+    attrs: { 'aria-label': 'Toggle navigation', 'aria-expanded': 'false' }
+  }, '☰');
+  
+  const header = h('header', { class: 'wrap header' },
+    h('div', { class: 'brand' }, 
+      h('div', { class: 'aperture', attrs: { 'aria-hidden': 'true' } }), 
+      h('span', { class: 'wordmark', text: 'moment' })
+    ),
+    nav,
+    mobileMenuBtn
+  );
+  
+  // Mobile menu functionality
+  mobileMenuBtn.addEventListener('click', () => {
+    const isExpanded = mobileMenuBtn.getAttribute('aria-expanded') === 'true';
+    mobileMenuBtn.setAttribute('aria-expanded', !isExpanded);
+    nav.classList.toggle('mobile-open');
+    document.body.classList.toggle('mobile-menu-open');
+  });
+  
+  // Close mobile menu when clicking nav links
+  nav.addEventListener('click', (e) => {
+    if (e.target.tagName === 'A') {
+      nav.classList.remove('mobile-open');
+      mobileMenuBtn.setAttribute('aria-expanded', 'false');
+      document.body.classList.remove('mobile-menu-open');
+    }
+  });
+  
+  // Close mobile menu on window resize if it gets too large
+  window.addEventListener('resize', () => {
+    if (window.innerWidth >= 640 && nav.classList.contains('mobile-open')) {
+      nav.classList.remove('mobile-open');
+      mobileMenuBtn.setAttribute('aria-expanded', 'false');
+      document.body.classList.remove('mobile-menu-open');
+    }
+  });
+  
+  return header;
+};
 
 // Hero
 const Hero = () => {

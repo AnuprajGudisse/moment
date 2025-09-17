@@ -122,13 +122,14 @@ export default function Profile() {
 
       const { data, error } = await supabase
         .from("photos")
-        .select("id, storage_path, exif, created_at, caption")
+        .select("id, storage_path, exif, created_at, caption, context")
         .eq("user_id", userId)
+        .eq("context", "post") // Only show regular posts, not event or community photos
         .order("created_at", { ascending: false })
         .limit(48); // Get more to account for filtering
       if (error) return; // keep silent for now
       setMyPhotos((data || [])
-        .filter(p => !excludeIds.has(p.id)) // Filter out community photos
+        .filter(p => !excludeIds.has(p.id)) // Filter out community photos (legacy check)
         .slice(0, 24) // Limit to 24 photos
         .map((p) => ({
           id: p.id,

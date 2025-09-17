@@ -267,6 +267,7 @@ export default function UploadDialog({ open, onClose, onUploaded, embedded = fal
         storage_path: key,
         caption: caption,
         exif: exif,
+        context: 'post' // Regular post upload, will appear in main feed
       });
       if (ins.error) throw ins.error;
 

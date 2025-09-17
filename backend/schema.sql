@@ -117,11 +117,14 @@ create table if not exists public.photos (
   storage_path text not null,
   caption text,
   exif jsonb,
+  photo_context text default 'profile' check (photo_context in ('profile', 'event', 'community', 'private')),
   created_at timestamptz not null default now()
 );
 
 create index if not exists photos_created_at_idx on public.photos (created_at desc);
 create index if not exists photos_user_created_idx on public.photos (user_id, created_at desc);
+create index if not exists photos_context_idx on public.photos (photo_context);
+create index if not exists photos_user_context_idx on public.photos (user_id, photo_context);
 
 alter table public.photos enable row level security;
 
@@ -642,5 +645,134 @@ do $$ begin
   ) then
     create policy "Applicants can delete own application" on public.gag_applications
       for delete using (auth.uid() = applicant_id);
+  end if;
+end $$;
+
+-- Events: photowalks, meetups, challenges, etc.
+create table if not exists public.events (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text,
+  location text,
+  event_date timestamptz,
+  event_type text check (event_type in ('photowalk', 'meetup', 'challenge', 'workshop', 'exhibition', 'other')),
+  max_participants integer,
+  created_by uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists events_created_by_idx on public.events (created_by);
+create index if not exists events_event_date_idx on public.events (event_date);
+create index if not exists events_event_type_idx on public.events (event_type);
+
+alter table public.events enable row level security;
+
+do $$ begin
+  -- Events are readable by anyone
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='events' and policyname='Events are readable by anyone'
+  ) then
+    create policy "Events are readable by anyone" on public.events for select using (true);
+  end if;
+  -- Users can create events
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='events' and policyname='Users can create events'
+  ) then
+    create policy "Users can create events" on public.events for insert with check (auth.uid() = created_by);
+  end if;
+  -- Users can update their own events
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='events' and policyname='Users can update own events'
+  ) then
+    create policy "Users can update own events" on public.events for update using (auth.uid() = created_by) with check (auth.uid() = created_by);
+  end if;
+  -- Users can delete their own events
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='events' and policyname='Users can delete own events'
+  ) then
+    create policy "Users can delete own events" on public.events for delete using (auth.uid() = created_by);
+  end if;
+end $$;
+
+-- Event Participants: RSVP and attendance tracking
+create table if not exists public.event_participants (
+  event_id uuid not null references public.events(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  status text not null default 'going' check (status in ('going', 'maybe', 'not_going', 'attended')),
+  created_at timestamptz not null default now(),
+  primary key (event_id, user_id)
+);
+
+create index if not exists event_participants_event_idx on public.event_participants (event_id);
+create index if not exists event_participants_user_idx on public.event_participants (user_id);
+
+alter table public.event_participants enable row level security;
+
+do $$ begin
+  -- Event participants are readable by anyone
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='event_participants' and policyname='Event participants are readable by anyone'
+  ) then
+    create policy "Event participants are readable by anyone" on public.event_participants for select using (true);
+  end if;
+  -- Users can RSVP to events
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='event_participants' and policyname='Users can RSVP to events'
+  ) then
+    create policy "Users can RSVP to events" on public.event_participants for insert with check (auth.uid() = user_id);
+  end if;
+  -- Users can update their own RSVP
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='event_participants' and policyname='Users can update own RSVP'
+  ) then
+    create policy "Users can update own RSVP" on public.event_participants for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  end if;
+  -- Users can delete their own RSVP
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='event_participants' and policyname='Users can delete own RSVP'
+  ) then
+    create policy "Users can delete own RSVP" on public.event_participants for delete using (auth.uid() = user_id);
+  end if;
+end $$;
+
+-- Event Photos: photos specifically uploaded for an event
+create table if not exists public.event_photos (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events(id) on delete cascade,
+  photo_id uuid not null references public.photos(id) on delete cascade,
+  uploaded_by uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique(event_id, photo_id)
+);
+
+create index if not exists event_photos_event_idx on public.event_photos (event_id);
+create index if not exists event_photos_photo_idx on public.event_photos (photo_id);
+create index if not exists event_photos_uploaded_by_idx on public.event_photos (uploaded_by);
+
+alter table public.event_photos enable row level security;
+
+do $$ begin
+  -- Event photos are readable by anyone
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='event_photos' and policyname='Event photos are readable by anyone'
+  ) then
+    create policy "Event photos are readable by anyone" on public.event_photos for select using (true);
+  end if;
+  -- Users can add photos to events they're participating in
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='event_photos' and policyname='Participants can add photos to events'
+  ) then
+    create policy "Participants can add photos to events" on public.event_photos 
+      for insert with check (
+        auth.uid() = uploaded_by AND 
+        exists (select 1 from public.event_participants ep where ep.event_id = event_photos.event_id and ep.user_id = auth.uid())
+      );
+  end if;
+  -- Users can remove their own photos from events
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='event_photos' and policyname='Users can remove own event photos'
+  ) then
+    create policy "Users can remove own event photos" on public.event_photos for delete using (auth.uid() = uploaded_by);
   end if;
 end $$;
